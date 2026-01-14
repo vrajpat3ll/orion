@@ -1,22 +1,24 @@
 import asyncio
-from typing import Any, Dict, List, Union
 import click
-from client.client import LLMClient
-
-
-async def run(messages: List[Dict[str, Any]]):
-    client = LLMClient()
-    async for event in client.chat_completion(messages, stream=False):
-        print(event)
+import sys
+from typing import Union
+from cmd.cli import CLI
 
 
 @click.command()
 @click.argument("prompt", required=False)
-def main(prompt: Union[str, None]):
-    print("Hello from orion!")
-    messages = [{"role": "user", "content": prompt}]
-    asyncio.run(run(messages))
+def main(
+    prompt: Union[str, None],
+):
+    cli = CLI()
+    if prompt:
+        # print(f"{prompt = }")
+        result = asyncio.run(cli.run_single(prompt))
+        if result is None:
+            sys.exit(1)
+    # messages = [{"role": "user", "content": prompt}]
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    print("Hello from orion!")
+    main()

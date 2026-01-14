@@ -2,7 +2,7 @@ import asyncio
 import os
 
 # to get asynchronous messages
-from openai import APIConnectionError, AsyncOpenAI, RateLimitError
+from openai import APIConnectionError, APIError, AsyncOpenAI, RateLimitError
 from typing import Any, AsyncGenerator, Dict, List, Union
 from dotenv import load_dotenv
 
@@ -74,6 +74,9 @@ class LLMClient:
                         type=StreamEventType.ERROR, error=f"Connection error: {e}"
                     )
                     return
+            except APIError as e:
+                yield StreamEvent(type=StreamEventType.ERROR, error=f"API error: {e}")
+                return
 
     async def _stream_response(
         self, client: AsyncOpenAI, kwargs: Dict[str, Any]

@@ -6,7 +6,7 @@ from openai import APIConnectionError, AsyncOpenAI, RateLimitError
 from typing import Any, AsyncGenerator, Dict, List, Union
 from dotenv import load_dotenv
 
-from client.reponse import EventType, StreamEvent, TextDelta, TokenUsage
+from client.reponse import StreamEventType, StreamEvent, TextDelta, TokenUsage
 
 
 class LLMClient:
@@ -62,7 +62,7 @@ class LLMClient:
                     await asyncio.sleep(wait_time)
                 else:
                     yield StreamEvent(
-                        type=EventType.ERROR, error=f"Rate limit exceeded: {e}"
+                        type=StreamEventType.ERROR, error=f"Rate limit exceeded: {e}"
                     )
                     return
             except APIConnectionError as e:
@@ -71,7 +71,7 @@ class LLMClient:
                     await asyncio.sleep(wait_time)
                 else:
                     yield StreamEvent(
-                        type=EventType.ERROR, error=f"Connection error: {e}"
+                        type=StreamEventType.ERROR, error=f"Connection error: {e}"
                     )
                     return
 
@@ -101,12 +101,12 @@ class LLMClient:
 
             if delta.content:
                 yield StreamEvent(
-                    type=EventType.TEXT_DELTA,
+                    type=StreamEventType.TEXT_DELTA,
                     text_delta=TextDelta(delta.content),
                 )
 
         yield StreamEvent(
-            type=EventType.MESSAGE_COMPLETE,
+            type=StreamEventType.MESSAGE_COMPLETE,
             finish_reason=finish_reason,
             usage=usage,
         )
@@ -132,7 +132,7 @@ class LLMClient:
             )
         # print(response)
         return StreamEvent(
-            type=EventType.MESSAGE_COMPLETE,
+            type=StreamEventType.MESSAGE_COMPLETE,
             text_delta=text_delta,
             finish_reason=choice.finish_reason,
             usage=usage,

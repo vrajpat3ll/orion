@@ -29,7 +29,7 @@ class TokenUsage:
 
 
 @dataclass
-class EventType(str, Enum):
+class StreamEventType(str, Enum):
     TEXT_DELTA = "text_delta"
     MESSAGE_COMPLETE = "message_complete"
     ERROR = "error"
@@ -37,7 +37,7 @@ class EventType(str, Enum):
 
 @dataclass
 class StreamEvent:
-    type: EventType
+    type: StreamEventType
     text_delta: Union[TextDelta, None] = None
     error: Union[str, None] = None
     finish_reason: Union[str, None] = None

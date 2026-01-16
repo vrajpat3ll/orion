@@ -9,7 +9,7 @@ from utils.text import estimate_tokens#, count_tokens
 class LLMMessage:
     role: str
     content: str
-    token_count: Union[int, None]
+    token_count: Union[int, None] = None
 
     def to_dict(self) -> Dict[str, Any]:
         result = {

@@ -1,7 +1,8 @@
 [project]
 name = "orion"
 version = "0.1.0"
-description = "Add your description here"
+description = "My very own coding agent"
+authors = [{ name = "Vraj Patel", email = "vrajpat3ll@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -9,4 +10,15 @@ dependencies = [
     "openai>=2.15.0",
     "python-dotenv>=1.2.1",
     "rich>=14.2.0",
+    "tiktoken>=0.12.0",
 ]
+
+[dependency-groups]
+dev = [
+    "taskipy>=1.14.1"
+]
+
+[tool.taskipy.tasks]
+check = "ruff check"
+fmt = "ruff format"
+lint = "task fmt && task check"

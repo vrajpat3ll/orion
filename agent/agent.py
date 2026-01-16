@@ -1,8 +1,9 @@
 from __future__ import annotations
-from typing import Any, AsyncGenerator, Dict, List
+from typing import AsyncGenerator, Union
 from agent.events import AgentEvent, AgentEventType
 from client.llm_client import LLMClient
 from client.reponse import StreamEventType
+from context.manager import ContextManager
 
 
 class Agent:
@@ -10,26 +11,25 @@ class Agent:
         self,
     ) -> None:
         self.client = LLMClient()
-        self._context: List[Dict[str, Any]] = []
-        # TODO: use a manager instead of keeping everything here
-        # self._context_mgr = ContextManager()
+        self.context_manager = ContextManager()
 
     async def run(self, message: str):
-        self._context = [{"role": "user", "content": message}]
-
         yield AgentEvent.agent_start(message)
-        # TODO: add user message to context
+        self.context_manager.add_user_message(message)
 
-        usage = None
-        final_response = None
+        usage: Union[str, None] = None
+        final_response: Union[str, None] = None
         async for event in self._agentic_loop():
             yield event
             match event.type:
                 case AgentEventType.TEXT_COMPLETE:
                     event.data
                     final_response = event.data.get("content", "")
+
+                    if final_response:
+                        AgentEvent.text_complete(final_response)
+
                     # TODO: usage to be added
-                    AgentEvent.text_complete(final_response)
 
         yield AgentEvent.agent_end(
             response=final_response,
@@ -37,10 +37,10 @@ class Agent:
         )
 
     async def _agentic_loop(self) -> AsyncGenerator[AgentEvent]:
-        messages = self._context
-
         response_text = ""
-        async for event in self.client.chat_completion(messages, stream=True):
+        async for event in self.client.chat_completion(
+            self.context_manager.get_messages(), stream=True
+        ):
             match event.type:
                 case StreamEventType.TEXT_DELTA:
                     if event.text_delta:
@@ -53,6 +53,7 @@ class Agent:
                         event.error or "Unknown error occured."
                     )
 
+        self.context_manager.add_assistant_message(response_text)
         if response_text:
             yield AgentEvent.text_complete(content=response_text)
 

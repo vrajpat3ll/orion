@@ -1,0 +1,141 @@
+from __future__ import annotations
+import abc
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Union
+from pydantic import BaseModel, ValidationError
+from dataclasses import dataclass, field
+from pydantic.json_schema import model_json_schema
+
+
+class ToolKind(str, Enum):
+    READ = "read"
+
+
+@dataclass
+class ToolResult:
+    success: bool
+    output: str
+    error: Union[str, None] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    truncated: bool = False
+
+    @classmethod
+    def error_result(cls, error: str, output: str = "", **kwargs: Any):
+        return cls(
+            success=False,
+            output=output,
+            error=error,
+            **kwargs,
+        )
+
+    @classmethod
+    def success_result(cls, output: str, **kwargs: Any):
+        return cls(
+            success=True,
+            output=output,
+            **kwargs,
+        )
+
+    def to_model_output(self) -> str:
+        if self.success:
+            return self.output  # format if needed
+
+        return f"Error: {self.error}\n\nOutput:\n{self.output}"
+
+
+@dataclass
+class ToolInvocation:
+    params: Dict[str, Any]
+    cwd: Path
+
+
+@dataclass
+class ToolConfirmation:
+    tool_name: str
+    description: str
+    params: Dict[str, Any]
+
+
+class Tool(abc.ABC):
+    name: str = "base_tool"
+    description: str = "Base tool"
+    kind: ToolKind = ToolKind.READ
+
+    def __init__(self) -> None:
+        pass
+
+    @property
+    def schema(self) -> Union[Dict[str, Any], type["BaseModel"]]:
+        raise NotImplementedError(
+            "Tool must define schema property or class attributes"
+        )
+
+    @abc.abstractmethod
+    async def execute(self, invocation: ToolInvocation) -> ToolResult:
+        pass
+
+    def validate_params(self, params: Dict[str, Any]) -> List[str]:
+        # thanks pydantic
+        schema = self.schema
+        if isinstance(schema, type) and issubclass(schema, BaseModel):
+            try:
+                schema(**params)
+            except ValidationError as e:
+                errors = []
+                for error in e.errors():
+                    field = ".".join(str(x) for x in error.get("loc", []))
+                    msg = error.get("msg", "Validation error")
+                    errors.append(f"Paramater '{field}': {msg}")
+
+                return errors
+            except Exception as e:
+                return [str(e)]
+        return []
+
+    def is_mutating(self, params: Dict[str, Any]) -> bool:
+        # is the tool able to mutate the state
+        return self.kind in {
+            ToolKind.WRITE,
+            ToolKind.SHELL,
+            ToolKind.NETWORK,
+            ToolKind.MEMORY,
+        }
+
+    async def get_confirmation(
+        self, invocation: ToolInvocation
+    ) -> Union[ToolConfirmation, None]:
+        if not self.is_mutating(invocation.params):
+            return None
+
+        return ToolConfirmation(
+            tool_name=self.name,
+            params=invocation.params,
+            description=f"Execute {self.name}",
+        )
+
+    def to_openai_schema(self) -> Dict[str, Any]:
+        schema = self.schema
+        if isinstance(schema, type) and issubclass(schema, BaseModel):
+            json_schema = model_json_schema(schema, mode="serialization")
+            return {
+                "name": self.name,
+                "description": self.description,
+                "parameters": {
+                    "type": "object",
+                    "properties": json_schema.get("properties", {}),
+                    "required": json_schema.get("required", []),
+                },
+            }
+        if isinstance(schema, Dict):
+            result: Dict[str, Any] = {
+                "name": self.name,
+                "description": self.description,
+            }
+            if "parameters" in schema:
+                result["parameters"] = schema["parameters"]
+            else:
+                result["parameters"] = schema
+            return result
+
+        raise ValueError(f"Invalid schema type for tool {self.name}: {type(schema)}")

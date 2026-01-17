@@ -12,11 +12,11 @@ def main(
 ):
     cli = CLI()
     if prompt:
-        # print(f"{prompt = }")
         result = asyncio.run(cli.run_single(prompt))
         if result is None:
             sys.exit(1)
-    # messages = [{"role": "user", "content": prompt}]
+    else:
+        asyncio.run(cli.run_interactive())
 
 
 if __name__ == "__main__":

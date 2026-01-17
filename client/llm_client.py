@@ -133,7 +133,7 @@ class LLMClient:
                 total_tokens=response.usage.total_tokens,
                 cached_tokens=response.usage.prompt_tokens_details.cached_tokens,
             )
-        # print(response)
+
         return StreamEvent(
             type=StreamEventType.MESSAGE_COMPLETE,
             text_delta=text_delta,

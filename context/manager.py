@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Union
 from dataclasses import dataclass
 
 from prompts import get_system_prompt
-from utils.text import estimate_tokens#, count_tokens
+from utils.text import count_tokens
 
 
 @dataclass
@@ -25,15 +25,15 @@ class ContextManager:
     def __init__(self) -> None:
         self._system_prompt = get_system_prompt()
         # ? need model name to actually count tokens, maybe use a global config
-        self._model_name = ""
+        # maybe we assume that each agent only uses one single model
+        self._model_name = "mistralai/devstral-2512:free"
         self._messages: List[LLMMessage] = []
 
     def add_user_message(self, message: str):
         item = LLMMessage(
             role="user",
-            content=message,
-            # token_count=count_tokens(message, config.currently_used_model_name),
-            token_count=estimate_tokens(message),
+            content=message or "",
+            token_count=count_tokens(message, self._model_name),
         )
         self._messages.append(item)
 
@@ -41,8 +41,7 @@ class ContextManager:
         item = LLMMessage(
             role="assistant",
             content=message or "",
-            # token_count=count_tokens(message, config.currently_used_model_name),
-            token_count=estimate_tokens(message),
+            token_count=count_tokens(message, self._model_name),
         )
         self._messages.append(item)
 

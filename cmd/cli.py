@@ -2,7 +2,7 @@ from agent.agent import Agent
 from agent.events import AgentEventType
 from config.config import Config
 from ui.tui import TUI, get_console
-from typing import Union
+from typing import Any, Dict, Union
 from utils.logger import get_logger
 
 console = get_console()
@@ -10,10 +10,14 @@ logger = get_logger(__name__)
 
 
 class CLI:
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: Config, **kwargs: Dict[str, Any]) -> None:
         self.agent: Union[Agent, None] = None
-        self.tui = TUI(console)
+        self.tui = TUI(
+            config=config,
+            console=console,
+        )
         self.config = config
+        self.kwargs = kwargs
 
     async def run_single(self, message: str) -> Union[str, None]:
         async with Agent(self.config) as agent:
@@ -22,6 +26,18 @@ class CLI:
             return await self._process_message(message)
 
     async def run_interactive(self):
+        show_info_card = self.kwargs.get("info", False)
+        if isinstance(show_info_card, Dict):
+            show_info_card = False
+        self.tui.print_welcome(
+            title="Config Info Card",
+            lines=[
+                ["model", f"{self.config.model.name}"],
+                ["cwd", f"{self.config.cwd}"],
+                ["Available commands", "/help /config /approval /model /exit"],
+            ],
+            show_info_card=show_info_card,
+        )
         try:
             async with Agent(self.config) as agent:
                 self.agent = agent

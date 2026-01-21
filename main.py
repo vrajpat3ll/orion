@@ -2,11 +2,10 @@ import asyncio
 from pathlib import Path
 import click
 import sys
-from typing import Union
+from typing import Any, Dict, Union
 from cmd.cli import CLI
 from config.loader import load_config
 from ui.tui import get_console
-from utils import logo
 
 console = get_console()
 
@@ -20,9 +19,17 @@ console = get_console()
     help="Current working directory",
     required=False,
 )
+@click.option(
+    "--info",
+    is_flag=True,
+    default=False,
+    help="Show config info card",
+    required=False,
+)
 def main(
     prompt: Union[str, None],
     cwd: Union[Path, None] = None,
+    info: bool = False,
 ):
     try:
         config = load_config(cwd=cwd)
@@ -35,9 +42,12 @@ def main(
         console.print(f"\n[error] Configuration Error: {e}[/error]")
         sys.exit(1)
 
-    cli = CLI(config=config)
+    kwargs: Dict[str, Any] = {
+        "info": info,
+    }
 
-    print(logo.logo)
+    cli = CLI(config=config, **kwargs)
+
     if prompt:
         result = asyncio.run(cli.run_single(prompt))
         if result is None:

@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Union
 from dataclasses import dataclass, field
 
+from config.config import Config
 from prompts import get_system_prompt
 from utils.text import count_tokens
 
@@ -30,18 +31,16 @@ class LLMMessage:
 
 
 class ContextManager:
-    def __init__(self) -> None:
+    def __init__(self, config: Config) -> None:
+        self.config = config
         self._system_prompt = get_system_prompt()
-        # ? need model name to actually count tokens, maybe use a global config
-        # maybe we assume that each agent only uses one single model
-        self._model_name = "mistralai/devstral-2512:free"
         self._messages: List[LLMMessage] = []
 
     def add_user_message(self, message: str):
         item = LLMMessage(
             role="user",
             content=message or "",
-            token_count=count_tokens(message, self._model_name),
+            token_count=count_tokens(message, self.config.model_name),
         )
         self._messages.append(item)
 
@@ -54,7 +53,7 @@ class ContextManager:
             role="assistant",
             content=message or "",
             tool_calls=tool_calls or [],
-            token_count=count_tokens(message, self._model_name),
+            token_count=count_tokens(message, self.config.model_name),
         )
         self._messages.append(item)
 
@@ -63,7 +62,7 @@ class ContextManager:
             role="tool",
             content=message,
             tool_call_id=tool_call_id,
-            token_count=count_tokens(message or "", self._model_name),
+            token_count=count_tokens(message or "", self.config.model_name),
         )
         self._messages.append(item)
 
@@ -83,11 +82,11 @@ class ContextManager:
         return messages
 
 
-if __name__ == "__main__":
-    from pprint import pprint
+# if __name__ == "__main__":
+#     from pprint import pprint
 
-    CtxMgr = ContextManager()
-    CtxMgr.add_user_message("Hi!")
-    CtxMgr.add_assistant_message("Hi, how are you?")
+#     CtxMgr = ContextManager(config=Config())
+#     CtxMgr.add_user_message("Hi!")
+#     CtxMgr.add_assistant_message("Hi, how are you?")
 
-    pprint(CtxMgr.get_messages())
+#     pprint(CtxMgr.get_messages())

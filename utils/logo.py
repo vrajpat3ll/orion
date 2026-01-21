@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Tuple, Literal
+from rich.text import Text
 
 GradientMode = Literal["horizontal", "vertical", "none"]
 PresetMode = Literal["orion", "sunset", "matrix", "ice"]
@@ -59,6 +60,30 @@ def _make_logo(lines: list[str], cfg: ColorConfig):
             return "\n".join(out) + "\033[0m"
 
 
+def _make_logo_text(lines: list[str], cfg: ColorConfig) -> Text:
+    text = Text()
+    if not cfg.enabled or cfg.mode == "none":
+        return Text("\n".join(lines))
+
+    if cfg.mode == "vertical":
+        h = max(len(lines) - 1, 1)
+        for i, line in enumerate(lines):
+            t = i / h
+            color = _interpolate(cfg.start, cfg.end, t)
+            text.append(line + "\n", style=f"rgb({color[0]},{color[1]},{color[2]})")
+
+    else:  # horizontal
+        for line in lines:
+            w = max(len(line) - 1, 1)
+            for i, ch in enumerate(line):
+                t = i / w
+                color = _interpolate(cfg.start, cfg.end, t)
+                text.append(ch, style=f"rgb({color[0]},{color[1]},{color[2]})")
+            text.append("\n")
+
+    return text
+
+
 def preset(name: PresetMode, mode: GradientMode = "horizontal"):
     s, e = PRESETS[name]
     return ColorConfig(start=s, end=e, mode=mode)
@@ -74,7 +99,14 @@ orion_logo = [
     "               O R I O N",
 ]
 
+
+_preset: PresetMode = "sunset"
 logo = _make_logo(
     orion_logo,
-    preset("sunset"),
+    preset(_preset),
+)
+
+rich_logo_text = _make_logo_text(
+    orion_logo,
+    preset(_preset),
 )

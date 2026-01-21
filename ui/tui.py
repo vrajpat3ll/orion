@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Set, Tuple, Union
 from rich import box
+from rich.align import Align
 from rich.console import Console, Group
 from rich.theme import Theme
 from rich.rule import Rule
@@ -9,6 +10,9 @@ from rich.text import Text
 from rich.table import Table
 from rich.syntax import Syntax
 from rich.panel import Panel
+
+from config.config import Config
+from utils import logo
 from utils.paths import display_path_rel_to_cwd
 from utils.text import truncate_text
 
@@ -47,11 +51,16 @@ def get_console() -> Console:
 
 
 class TUI:
-    def __init__(self, console: Union[Console, None] = None) -> None:
+    def __init__(
+        self,
+        config: Config,
+        console: Union[Console, None] = None,
+    ) -> None:
         self.console = console or get_console()
+        self.config = config
         self._assistant_stream_open = False
         self._tool_args_by_call_id: Dict[str, Dict[str, Any]] = {}
-        self._cwd = Path.cwd()  # TODO: get from global config
+        self._cwd = self.config.cwd  # TODO: get from global config
 
     def begin_assistant(self) -> None:
         self.console.print()
@@ -150,6 +159,8 @@ class TUI:
         for line in body.splitlines():
             m = re.match(r"\s*(\d+)\|(.*)", line)
             if not m:
+                if re.match(r"... \[truncated \d* total lines\]", line):
+                    continue
                 return None
 
             line_number = int(m.group(1))
@@ -217,7 +228,7 @@ class TUI:
                     )
                 )
             else:
-                output_display = truncate_text(output, "", 250)
+                output_display = truncate_text(output, "gpt-4", 250)
                 blocks.append(
                     Syntax(
                         output_display,
@@ -245,6 +256,37 @@ class TUI:
         )
         self.console.print()
         self.console.print(panel)
+
+    def print_welcome(self, *, title: str, lines, show_info_card: bool = False):
+        layout = Table.grid(expand=True)
+        layout.add_column(width=42, justify="left")  # FIXED WIDTH FOR LOGO
+        if show_info_card:
+            info_table = Table.grid(padding=(0, 1))
+            info_table.add_column(style="dim", justify="right", no_wrap=True)
+            info_table.add_column(style="assistant")
+
+            for k, v in lines:
+                info_table.add_row(str(k), str(v))
+
+            layout.add_column(justify="right")
+
+            layout.add_row(
+                Align.left(logo.rich_logo_text),
+                Align.right(
+                    Panel(
+                        info_table,
+                        title=title,
+                        border_style="dim",
+                        padding=(1, 2),
+                    )
+                ),
+            )
+        else:
+            layout.add_row(
+                Align.left(logo.rich_logo_text),
+            )
+
+        self.console.print(layout)
 
     def _guess_programming_lang(self, path: Union[str, None]) -> str:
         if not path:

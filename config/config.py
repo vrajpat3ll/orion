@@ -6,22 +6,25 @@ from pydantic import BaseModel, Field
 
 
 class ModelConfig(BaseModel):
-    name: str = "mistralai/devstral-2512:free"
+    load_dotenv()
+    name: str = os.environ.get(
+        "MODEL_ID",
+        "mistralai/devstral-2512:free",
+    )  # "mistralai/devstral-2512:free"
     # ? use a fairly creative response
     temperature: float = Field(default=1, ge=0.0, le=2.0)
-    context_window: Union[int, None] = None  # 256_000
+    context_window: Union[int, None] = 256_000
 
 
 class Config(BaseModel):
+    load_dotenv()
     model: ModelConfig = Field(default_factory=ModelConfig)
     cwd: Path = Field(default_factory=Path.cwd)
-    
+
     # load .env variables here
-    load_dotenv()
 
     # per agent
     max_turns: int = 100
-    max_tool_output_tokens: int = 50_000
 
     developer_instructions: Union[str, None] = None
     user_instructions: Union[str, None] = None

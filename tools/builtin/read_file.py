@@ -93,7 +93,7 @@ class ReadFileTool(Tool):
             for i, line in enumerate(selected_lines):
                 formatted_lines.append(f"{i + 1:>5}|{line}")
 
-            model = "mistralai/devstral-2512:free"
+            model = "gpt-4"
             output = "\n".join(formatted_lines)
             token_count = count_tokens(output, model)
 
@@ -107,7 +107,7 @@ class ReadFileTool(Tool):
                 )
                 truncated = True
             metadata_lines = []
-            if start_idx > 0 or end_idx < total_lines:
+            if start_idx >= 0 or end_idx <= total_lines:
                 metadata_lines.append(
                     f"Showing lines {start_idx + 1}-{end_idx} of {total_lines}"
                 )

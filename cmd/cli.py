@@ -1,5 +1,6 @@
 from agent.agent import Agent
 from agent.events import AgentEventType
+from config.config import Config
 from ui.tui import TUI, get_console
 from typing import Union
 from utils.logger import get_logger
@@ -9,19 +10,20 @@ logger = get_logger(__name__)
 
 
 class CLI:
-    def __init__(self) -> None:
+    def __init__(self, config: Config) -> None:
         self.agent: Union[Agent, None] = None
         self.tui = TUI(console)
+        self.config = config
 
     async def run_single(self, message: str) -> Union[str, None]:
-        async with Agent() as agent:
+        async with Agent(self.config) as agent:
             self.agent = agent
             logger.info("[run_single] Initialized agent")
             return await self._process_message(message)
 
     async def run_interactive(self):
         try:
-            async with Agent() as agent:
+            async with Agent(self.config) as agent:
                 self.agent = agent
                 while True:
                     prompt = None

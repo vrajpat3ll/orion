@@ -1,10 +1,8 @@
 import asyncio
-import os
 
 # to get asynchronous messages
 from openai import APIConnectionError, APIError, AsyncOpenAI, RateLimitError
 from typing import Any, AsyncGenerator, Dict, List, Union
-from dotenv import load_dotenv
 
 from client.reponse import (
     StreamEventType,
@@ -15,21 +13,20 @@ from client.reponse import (
     ToolCallDelta,
     parse_tool_call_arguments,
 )
+from config.config import Config
 
 
 class LLMClient:
-    def __init__(self) -> None:
+    def __init__(self, config: Config) -> None:
         self._client: Union[AsyncOpenAI, None] = None
         self._max_retries: int = 3
-        load_dotenv()
+        self.config = config
 
     def get_client(self) -> AsyncOpenAI:
         if self._client is None:
             self._client = AsyncOpenAI(
-                api_key=os.environ.get(
-                    "OPENROUTER_API_KEY"
-                ),  # use *_API_KEY for this param
-                base_url="https://openrouter.ai/api/v1/",  # use BASE_URL env variable later on
+                api_key=self.config.api_key,
+                base_url=self.config.base_url,
                 # max_retries=0,  # set later to something reasonable, default is 2
             )
         return self._client

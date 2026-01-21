@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from typing import List, Union
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 
@@ -14,6 +15,9 @@ class ModelConfig(BaseModel):
 class Config(BaseModel):
     model: ModelConfig = Field(default_factory=ModelConfig)
     cwd: Path = Field(default_factory=Path.cwd)
+    
+    # load .env variables here
+    load_dotenv()
 
     # per agent
     max_turns: int = 100

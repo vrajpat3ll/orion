@@ -4,6 +4,7 @@ from typing import AsyncGenerator, List, Union
 from agent.events import AgentEvent, AgentEventType
 from client.llm_client import LLMClient
 from client.reponse import StreamEventType, ToolCall, ToolCallResult
+from config.config import Config
 from context.manager import ContextManager
 from tools.registry import create_default_registry
 from utils.logger import get_logger
@@ -14,8 +15,10 @@ logger = get_logger(__name__)
 class Agent:
     def __init__(
         self,
+        config: Config,
     ) -> None:
-        self.client = LLMClient()
+        self.config = config
+        self.client = LLMClient(config=self.config)
         self.context_manager = ContextManager()
         self.tool_registry = create_default_registry()
 
@@ -34,7 +37,7 @@ class Agent:
 
                     if final_response:
                         AgentEvent.text_complete(final_response)
-
+                        logger.info("[agent.run] got response from LLM")
                     # TODO: usage to be added
 
         yield AgentEvent.agent_end(

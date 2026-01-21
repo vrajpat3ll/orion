@@ -33,8 +33,9 @@ def main(
             sys.exit(1)
     except Exception as e:
         console.print(f"\n[error] Configuration Error: {e}[/error]")
-    
-    cli = CLI()
+        sys.exit(1)
+
+    cli = CLI(config=config)
 
     print(logo.logo)
     if prompt:

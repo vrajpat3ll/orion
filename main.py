@@ -3,6 +3,7 @@ import click
 import sys
 from typing import Union
 from cmd.cli import CLI
+from utils import logo
 
 
 @click.command()
@@ -11,6 +12,8 @@ def main(
     prompt: Union[str, None],
 ):
     cli = CLI()
+
+    print(logo.logo)
     if prompt:
         result = asyncio.run(cli.run_single(prompt))
         if result is None:

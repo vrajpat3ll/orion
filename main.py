@@ -1,16 +1,39 @@
 import asyncio
+from pathlib import Path
 import click
 import sys
 from typing import Union
 from cmd.cli import CLI
+from config.loader import load_config
+from ui.tui import get_console
 from utils import logo
+
+console = get_console()
 
 
 @click.command()
 @click.argument("prompt", required=False)
+@click.option(
+    "--cwd",
+    "-c",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Current working directory",
+    required=False,
+)
 def main(
     prompt: Union[str, None],
+    cwd: Union[Path, None] = None,
 ):
+    try:
+        config = load_config(cwd=cwd)
+        errors = config.validate()
+        if errors:
+            for e in errors:
+                console.print(f"\n[error]{e}[/error]")
+            sys.exit(1)
+    except Exception as e:
+        console.print(f"\n[error] Configuration Error: {e}[/error]")
+    
     cli = CLI()
 
     print(logo.logo)

@@ -6,7 +6,15 @@ from openai import APIConnectionError, APIError, AsyncOpenAI, RateLimitError
 from typing import Any, AsyncGenerator, Dict, List, Union
 from dotenv import load_dotenv
 
-from client.reponse import StreamEventType, StreamEvent, TextDelta, TokenUsage
+from client.reponse import (
+    StreamEventType,
+    StreamEvent,
+    TextDelta,
+    TokenUsage,
+    ToolCall,
+    ToolCallDelta,
+    parse_tool_call_arguments,
+)
 
 
 class LLMClient:
@@ -31,8 +39,30 @@ class LLMClient:
             await self._client.close()
             self._client = None
 
+    def _build_tools(self, tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": tool["name"],
+                    "description": tool.get("description", ""),
+                    "parameters": tool.get(
+                        "parameters",
+                        {
+                            "type": "object",
+                            "properties": {},
+                        },
+                    ),
+                },
+            }
+            for tool in tools
+        ]
+
     async def chat_completion(
-        self, messages: List[Dict[str, Any]], stream: bool = True
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Union[List[Dict[str, Any]], None] = None,
+        stream: bool = True,
     ) -> AsyncGenerator[StreamEvent, None]:
         """create a completion of the messages given
 
@@ -46,6 +76,12 @@ class LLMClient:
             "messages": messages,
             "stream": stream,
         }
+        if tools:
+            kwargs["tools"] = self._build_tools(tools)
+
+            # ? can specify as well but for now we'll stick to "auto"
+            kwargs["tool_choice"] = "auto"
+
         # exponential backoff retrying
         for attempt in range(self._max_retries + 1):
             try:
@@ -85,6 +121,7 @@ class LLMClient:
 
         usage: Union[TokenUsage, None] = None
         finish_reason: Union[str, None] = None
+        tool_calls: Dict[int, Dict[str, Any]] = {}
         async for chunk in response:
             if hasattr(chunk, "usage") and chunk.usage:
                 usage = TokenUsage(
@@ -108,6 +145,51 @@ class LLMClient:
                     text_delta=TextDelta(delta.content),
                 )
 
+            if delta.tool_calls:
+                for tool_call_delta in delta.tool_calls:
+                    idx = tool_call_delta.index
+                    if idx not in tool_calls:
+                        tool_calls[idx] = {
+                            "id": tool_call_delta.id or "",
+                            "name": "",
+                            "arguments": "",
+                        }
+
+                        if tool_call_delta.function:
+                            if tool_call_delta.function.name:
+                                tool_calls[idx]["name"] = tool_call_delta.function.name
+                                yield StreamEvent(
+                                    type=StreamEventType.TOOL_CALL_START,
+                                    tool_call_delta=ToolCallDelta(
+                                        call_id=tool_calls[idx]["id"],
+                                        name=tool_call_delta.function.name,
+                                        # arguments_delta=tool_calls[idx]["arguments"],
+                                    ),
+                                )
+
+                            if tool_call_delta.function.arguments:
+                                tool_calls[idx]["arguments"] += (
+                                    tool_call_delta.function.arguments
+                                )
+                                yield StreamEvent(
+                                    type=StreamEventType.TOOL_CALL_DELTA,
+                                    tool_call_delta=ToolCallDelta(
+                                        call_id=tool_calls[idx]["id"],
+                                        name=tool_call_delta.function.name,
+                                        arguments_delta=tool_call_delta.function.arguments,
+                                    ),
+                                )
+
+        for idx, tc in tool_calls.items():
+            yield StreamEvent(
+                type=StreamEventType.TOOL_CALL_COMPLETE,
+                tool_call=ToolCall(
+                    call_id=tc["id"],
+                    name=tc["name"],
+                    arguments=parse_tool_call_arguments(tc["arguments"]),
+                ),
+            )
+
         yield StreamEvent(
             type=StreamEventType.MESSAGE_COMPLETE,
             finish_reason=finish_reason,
@@ -124,6 +206,18 @@ class LLMClient:
         text_delta = None
         if message.content:
             text_delta = TextDelta(content=message.content)
+
+        # TODO: need a way to send a message of calling this tool to the agent,
+        # ? we'll see later
+        tool_calls = [
+            ToolCall(
+                call_id=tc.id,
+                name=tc.function.name,
+                arguments=parse_tool_call_arguments(tc.function.arguments),
+            )
+            for tc in message.tool_calls
+            if message.tool_calls
+        ]
 
         usage = None
         if response.usage:

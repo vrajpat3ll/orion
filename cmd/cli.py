@@ -67,6 +67,41 @@ class CLI:
                         self.tui.end_assistant()
                         assistant_streaming = False
 
+                case AgentEventType.TOOL_CALL_START:
+                    tool_name = event.data.get("name", "Unknown Tool")
+                    tool = self.agent.tool_registry.get(tool_name)
+                    tool_kind = None
+                    if not tool:
+                        return
+                    tool_kind = tool.kind.value
+                    logger.info(f"{event.data = }, {tool_kind = }")
+                    self.tui.tool_call_start(
+                        call_id=event.data.get("call_id", ""),
+                        name=tool_name,
+                        tool_kind=tool_kind,
+                        arguments=event.data.get("arguments", {}),
+                    )
+
+                case AgentEventType.TOOL_CALL_COMPLETE:
+                    tool_call_id = event.data.get("call_id", "Unknown Id")
+                    tool_name = event.data.get("name", "Unknown Tool")
+                    success = event.data.get("success", "Unknown Status")
+                    error = event.data.get("error")
+                    metadata = event.data.get("metadata", {})
+                    truncated = event.data.get("truncated", False)
+                    output = event.data.get("output", "")
+
+                    logger.info(f"[cli] tool call completed, {event = }")
+                    self.tui.tool_call_complete(
+                        call_id=tool_call_id,
+                        name=tool_name,
+                        success=success,
+                        error=error,
+                        metadata=metadata,
+                        output=output,
+                        truncated=truncated,
+                    )
+
                 case AgentEventType.AGENT_ERROR:
                     error = event.data.get("error", "Unknown error")
                     console.print(f"\n[error]{error}\n[/error]")

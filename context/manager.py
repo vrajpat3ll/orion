@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Union
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from prompts import get_system_prompt
 from utils.text import count_tokens
@@ -9,14 +9,22 @@ from utils.text import count_tokens
 class LLMMessage:
     role: str
     content: str
+    tool_call_id: Union[str, None] = None
+    tool_calls: List[Dict[str, Any]] = field(default_factory=list)
+
     token_count: Union[int, None] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        result = {
+        result: Dict[str, Any] = {
             "role": self.role,
         }
+        if self.tool_call_id:
+            result["tool_call_id"] = self.tool_call_id
+        if self.tool_calls:
+            result["tool_calls"] = self.tool_calls
         if self.content:
             result["content"] = self.content
+        result["content"] = self.content or ""
 
         return result
 
@@ -37,11 +45,25 @@ class ContextManager:
         )
         self._messages.append(item)
 
-    def add_assistant_message(self, message: str):
+    def add_assistant_message(
+        self,
+        message: str,
+        tool_calls: Union[List[Dict[str, Any]], None] = None,
+    ):
         item = LLMMessage(
             role="assistant",
             content=message or "",
+            tool_calls=tool_calls or [],
             token_count=count_tokens(message, self._model_name),
+        )
+        self._messages.append(item)
+
+    def add_tool_result(self, tool_call_id: str, message: str) -> None:
+        item = LLMMessage(
+            role="tool",
+            content=message,
+            tool_call_id=tool_call_id,
+            token_count=count_tokens(message or "", self._model_name),
         )
         self._messages.append(item)
 

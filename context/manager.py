@@ -33,7 +33,7 @@ class LLMMessage:
 class ContextManager:
     def __init__(self, config: Config) -> None:
         self.config = config
-        self._system_prompt = get_system_prompt()
+        self._system_prompt = get_system_prompt(config)
         self._messages: List[LLMMessage] = []
 
     def add_user_message(self, message: str):

@@ -1,12 +1,9 @@
 from __future__ import annotations
-from pathlib import Path
 from typing import AsyncGenerator, List, Union
 from agent.events import AgentEvent, AgentEventType
-from client.llm_client import LLMClient
+from agent.session import Session
 from client.reponse import StreamEventType, ToolCall, ToolCallResult
 from config.config import Config
-from context.manager import ContextManager
-from tools.registry import create_default_registry
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -18,17 +15,16 @@ class Agent:
         config: Config,
     ) -> None:
         self.config = config
-        self.client = LLMClient(config=self.config)
-        self.context_manager = ContextManager(config=config)
-        self.tool_registry = create_default_registry()
+        self.session = Session(config)
 
     async def run(self, message: str) -> AsyncGenerator[AgentEvent]:
         yield AgentEvent.agent_start(message)
-        self.context_manager.add_user_message(message)
+        self.session.context_manager.add_user_message(message)
 
         usage: Union[str, None] = None
         final_response: Union[str, None] = None
         async for event in self._agentic_loop():
+            logger.critical(event)
             yield event
             match event.type:
                 case AgentEventType.TEXT_COMPLETE:
@@ -49,14 +45,16 @@ class Agent:
         max_turns = self.config.max_turns
 
         for turn in range(max_turns):
+            # print(f"{turn = }")
+            self.session.increment_turn()
             response_text = ""
 
-            tool_schemas = self.tool_registry.get_schemas()
+            tool_schemas = self.session.tool_registry.get_schemas()
 
             tool_calls: List[ToolCall] = []
 
-            async for event in self.client.chat_completion(
-                self.context_manager.get_messages(),
+            async for event in self.session.client.chat_completion(
+                self.session.context_manager.get_messages(),
                 tools=tool_schemas if tool_schemas else None,
                 stream=True,
             ):
@@ -82,7 +80,7 @@ class Agent:
                             )
                             tool_calls.append(event.tool_call)
 
-            self.context_manager.add_assistant_message(
+            self.session.context_manager.add_assistant_message(
                 response_text,
                 tool_calls=[
                     {
@@ -113,7 +111,7 @@ class Agent:
                     arguments=tool_call.arguments,
                 )
 
-                result = await self.tool_registry.invoke(
+                result = await self.session.tool_registry.invoke(
                     tool_call.name or "",
                     tool_call.arguments,
                     self.config.cwd,
@@ -133,7 +131,7 @@ class Agent:
                     )
                 )
             for tool_result in tool_call_results:
-                self.context_manager.add_tool_result(
+                self.session.context_manager.add_tool_result(
                     tool_result.tool_call_id,
                     tool_result.content,
                 )
@@ -150,7 +148,6 @@ class Agent:
         exc_type,
         exc_val,
         exc_tb,
-    ) -> Agent:
-        if self.client:
-            await self.client.close()
-        return self
+    ) -> None:
+        if self.session.client._client:
+            await self.session.client.close()

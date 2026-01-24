@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 
 # from datetime import datetime
@@ -9,7 +10,7 @@ root_dir = Path(__file__).resolve().parent.parent
 log_dir = root_dir / "logs"
 log_dir.mkdir(exist_ok=True)
 
-log_file = log_dir / "log.log"
+log_file = log_dir / f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
 
 # Configure the root logger only once
 logging.basicConfig(level=logging.INFO)  # basic fallback

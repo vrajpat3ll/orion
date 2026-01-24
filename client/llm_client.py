@@ -230,4 +230,5 @@ class LLMClient:
             text_delta=text_delta,
             finish_reason=choice.finish_reason,
             usage=usage,
+            tool_call=tool_calls[0],
         )

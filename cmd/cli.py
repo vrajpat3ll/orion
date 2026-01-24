@@ -87,7 +87,7 @@ class CLI:
 
                 case AgentEventType.TOOL_CALL_START:
                     tool_name = event.data.get("name", "Unknown Tool")
-                    tool = self.agent.tool_registry.get(tool_name)
+                    tool = self.agent.session.tool_registry.get(tool_name)
                     tool_kind = None
                     if not tool:
                         return

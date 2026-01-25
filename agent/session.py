@@ -21,7 +21,7 @@ class Session:
         self.config = config
         self.client = LLMClient(config=self.config)
         self.context_manager = ContextManager(config=config)
-        self.tool_registry = create_default_registry()
+        self.tool_registry = create_default_registry(config=config)
 
     def increment_turn(self) -> int:
         self._turn_count += 1

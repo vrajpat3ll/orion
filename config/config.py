@@ -1,16 +1,20 @@
 import os
 from pathlib import Path
-from typing import List, Union
+from typing import Dict, List, Union
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 
+class ShellEnvionmentPolicy(BaseModel):
+    ignore_default_excludes: bool = False
+    exclude_patterns: List[str] = Field(
+        default_factory=lambda: ["*KEY*", "*SECRET*", "*TOKEN*"]
+    )
+    set_vars: Dict[str, str] = Field(default_factory=dict)
+
+
 class ModelConfig(BaseModel):
-    load_dotenv()
-    name: str = os.environ.get(
-        "MODEL_ID",
-        "mistralai/devstral-2512:free",
-    )  # "mistralai/devstral-2512:free"
+    name: str = "mistralai/devstral-2512:free"  # default model
     # ? use a fairly creative response
     temperature: float = Field(default=1, ge=0.0, le=2.0)
     context_window: Union[int, None] = 256_000
@@ -20,6 +24,10 @@ class Config(BaseModel):
     load_dotenv()
     model: ModelConfig = Field(default_factory=ModelConfig)
     cwd: Path = Field(default_factory=Path.cwd)
+
+    shell_envionment_policy: ShellEnvionmentPolicy = Field(
+        default_factory=ShellEnvionmentPolicy
+    )
 
     # load .env variables here
 

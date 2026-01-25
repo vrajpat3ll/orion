@@ -1,6 +1,7 @@
 from typing import List
 from tools.builtin.edit_file import EditFileTool
 from tools.builtin.read_file import ReadFileTool
+from tools.builtin.shell import ShellTool
 from tools.builtin.write_file import WriteFileTool
 from tools.base import Tool
 
@@ -8,6 +9,7 @@ __all__ = [
     "ReadFileTool",
     "WriteFileTool",
     "EditFileTool",
+    "ShellTool",
 ]
 
 
@@ -16,4 +18,5 @@ def get_all_builtin_tools() -> List[type[Tool]]:
         ReadFileTool,
         WriteFileTool,
         EditFileTool,
+        ShellTool,
     ]

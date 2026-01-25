@@ -35,6 +35,7 @@ AGENT_THEME = Theme(
         "tool": "bright_magenta bold",
         "tool.read": "cyan",
         "tool.write": "yellow",
+        "tool.shell": "magenta",
         # Code / Blocks
         "code": "white",
     }
@@ -83,6 +84,7 @@ class TUI:
             "read_file": ["path", "offset", "limit"],
             "write_file": ["path", "create_directories", "content"],
             "edit_file": ["path", "replace_all", "old_string", "new_string"],
+            "shell": ["command", "timeout", "cwd"],
         }
 
         preferred = _PREFERRED_ORDER.get(tool_name, [])
@@ -193,6 +195,7 @@ class TUI:
         metadata: Dict[str, Any],
         diff: Union[str, None],
         truncated: bool,
+        exit_code: Union[int, None],
     ) -> None:
         border_style = "success" if success else "error"
         status_icon = "✓" if success else "✗"
@@ -204,6 +207,9 @@ class TUI:
             ("  ", "muted"),
             (f"#{call_id}", "muted"),
         )
+
+        args = self._tool_args_by_call_id.get(call_id, {})
+
         primary_path = None
         blocks = []
         if isinstance(metadata, Dict) and isinstance(metadata.get("path"), str):
@@ -265,6 +271,27 @@ class TUI:
                 Syntax(
                     diff_display,
                     lexer="diff",
+                    theme="monokai",
+                    word_wrap=True,
+                )
+            )
+        elif name == "shell":
+            command = args.get("command")
+            if isinstance(command, str) and command.strip():
+                blocks.append(
+                    Text(f"\033[2;2;33m$\033[0m {command.strip()}", style="muted")
+                )
+            if exit_code is not None:
+                blocks.append(Text(f"{exit_code = }", style="muted"))
+            output_display = truncate_text(
+                output,
+                self.config.model_name,
+                self._max_block_tokens,
+            )
+            blocks.append(
+                Syntax(
+                    output_display,
+                    "text",
                     theme="monokai",
                     word_wrap=True,
                 )

@@ -106,6 +106,7 @@ class CLI:
                     success = event.data.get("success", "Unknown Status")
                     error = event.data.get("error")
                     metadata = event.data.get("metadata", {})
+                    diff = event.data.get("diff")
                     truncated = event.data.get("truncated", False)
                     output = event.data.get("output", "")
 
@@ -116,6 +117,7 @@ class CLI:
                         success=success,
                         error=error,
                         metadata=metadata,
+                        diff=diff,
                         output=output,
                         truncated=truncated,
                     )

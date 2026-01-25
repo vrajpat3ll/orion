@@ -24,7 +24,7 @@ class Agent:
         usage: Union[str, None] = None
         final_response: Union[str, None] = None
         async for event in self._agentic_loop():
-            logger.critical(event)
+
             yield event
             match event.type:
                 case AgentEventType.TEXT_COMPLETE:

@@ -34,6 +34,7 @@ AGENT_THEME = Theme(
         # Tools
         "tool": "bright_magenta bold",
         "tool.read": "cyan",
+        "tool.write": "yellow",
         # Code / Blocks
         "code": "white",
     }
@@ -60,7 +61,8 @@ class TUI:
         self.config = config
         self._assistant_stream_open = False
         self._tool_args_by_call_id: Dict[str, Dict[str, Any]] = {}
-        self._cwd = self.config.cwd  # TODO: get from global config
+        self._cwd = self.config.cwd
+        self._max_block_tokens = 240
 
     def begin_assistant(self) -> None:
         self.console.print()
@@ -79,6 +81,8 @@ class TUI:
     def _ordered_args(self, tool_name: str, args: Dict[str, Any]) -> List[tuple]:
         _PREFERRED_ORDER = {
             "read_file": ["path", "offset", "limit"],
+            "write_file": ["path", "create_directories", "content"],
+            "edit_file": ["path", "replace_all", "old_string", "new_string"],
         }
 
         preferred = _PREFERRED_ORDER.get(tool_name, [])
@@ -100,6 +104,12 @@ class TUI:
         table.add_column(style="code", overflow="fold")
 
         for k, v in self._ordered_args(tool_name, args):
+            if isinstance(v, str):
+                if k in {"content", "old_string", "new_string"}:
+                    line_count = len(v.splitlines()) or 0
+                    byte_count = len(v.encode("utf-8", errors="replace"))
+                    v = f"<{line_count} lines • {byte_count} bytes>"
+
             table.add_row(str(k), str(v))
 
         return table
@@ -181,6 +191,7 @@ class TUI:
         output: str,
         error: Union[str, None],
         metadata: Dict[str, Any],
+        diff: Union[str, None],
         truncated: bool,
     ) -> None:
         border_style = "success" if success else "error"
@@ -228,7 +239,11 @@ class TUI:
                     )
                 )
             else:
-                output_display = truncate_text(output, "gpt-4", 250)
+                output_display = truncate_text(
+                    output,
+                    self.config.model_name,
+                    self._max_block_tokens,
+                )
                 blocks.append(
                     Syntax(
                         output_display,
@@ -237,6 +252,24 @@ class TUI:
                         word_wrap=False,
                     )
                 )
+        elif name in {"write_file", "edit_file"} and success and diff:
+            output_line = output.strip() or "Completed"
+            blocks.append(Text(output_line, style="muted"))
+            diff_text = diff
+            diff_display = truncate_text(
+                diff_text,
+                self.config.model_name,
+                self._max_block_tokens,
+            )
+            blocks.append(
+                Syntax(
+                    diff_display,
+                    lexer="diff",
+                    theme="monokai",
+                    word_wrap=True,
+                )
+            )
+
         if truncated:
             blocks.append(Text("note: tool output was truncated", style="warning"))
 

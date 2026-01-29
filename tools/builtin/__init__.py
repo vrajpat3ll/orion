@@ -1,6 +1,8 @@
 from . import edit_file as edit_file
 from . import grep as grep
 from . import glob as glob
+from . import web_search as web_search
+from . import web_fetch as web_fetch
 from . import list_dir as list_dir
 from . import read_file as read_file
 from . import shell as shell

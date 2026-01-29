@@ -90,6 +90,8 @@ class TUI:
             "list_dir": ["path", "include_hidden"],
             "grep": ["path", "case_insenstive", "pattern"],
             "glob": ["path", "pattern"],
+            "web_search": ["query", "pattern"],
+            "web_fetch": ["url", "timeout"],
         }
 
         preferred = _PREFERRED_ORDER.get(tool_name, [])
@@ -362,6 +364,58 @@ class TUI:
 
                     if isinstance(matches, int):
                         blocks.append(Text(f"{matches} matches", style="muted"))
+                    output_display = truncate_text(
+                        output,
+                        self.config.model_name,
+                        self._max_block_tokens,
+                    )
+                    blocks.append(
+                        Syntax(
+                            output_display,
+                            "text",
+                            theme="monokai",
+                            word_wrap=True,
+                        )
+                    )
+                case "web_search":
+                    results = metadata.get("results")
+                    query = args.get("query")
+                    summary = []
+
+                    if isinstance(query, str):
+                        summary.append(f"query: {query}")
+                    if isinstance(results, int):
+                        summary.append(f"{results} results")
+                    if summary:
+                        blocks.append(Text(" • ".join(summary), style="muted"))
+                    output_display = truncate_text(
+                        output,
+                        self.config.model_name,
+                        self._max_block_tokens,
+                    )
+                    blocks.append(
+                        Syntax(
+                            output_display,
+                            "text",
+                            theme="monokai",
+                            word_wrap=True,
+                        )
+                    )
+                case "web_fetch":
+                    status_code = metadata.get("status_code")
+                    content_length = metadata.get("content_length")
+                    url = args.get("url")
+                    summary = []
+
+                    if isinstance(status_code, int):
+                        summary.append(str(status_code))
+                    if isinstance(content_length, int):
+                        summary.append(f"{content_length} bytes")
+                    if isinstance(url, str):
+                        summary.append(url)
+
+                    if summary:
+                        blocks.append(Text(" • ".join(summary), style="muted"))
                     output_display = truncate_text(
                         output,
                         self.config.model_name,

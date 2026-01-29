@@ -41,11 +41,15 @@ class Config(BaseModel):
 
     @property
     def api_key(self) -> Optional[str]:
-        return os.environ.get("API_KEY")
+        return os.environ.get("OPENROUTER_API_KEY")
+
+    @property
+    def web_api_key(self) -> Optional[str]:
+        return os.environ.get("TAVILY_API_KEY")
 
     @property
     def base_url(self) -> Optional[str]:
-        return os.environ.get("BASE_URL")
+        return os.environ.get("LLM_BASE_URL")
 
     @property
     def model_name(self) -> str:

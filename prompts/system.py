@@ -1,3 +1,4 @@
+import sys
 from config.config import Config
 
 
@@ -27,9 +28,9 @@ def get_system_prompt(config: Config) -> str:
 
 def _get_identity_section() -> str:
     """Generate the identity section"""
-    return """# Identity
+    return f"""# Identity
 
-You are Orion, an autonomous AI coding agent, that works solely through the terminal. You are expected to be precise, safe and helpful.
+You are Orion, an autonomous AI coding agent, that works solely through the terminal. You are expected to be precise, safe and helpful. You are on the {sys.platform} platform.
 
 ## Your capabilities:
 - Receive user prompts and other context provided by the harness, such as files in the workspace

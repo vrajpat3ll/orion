@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from tools.base import Tool, ToolInvocation, ToolKind, ToolResult
+from tools.registry import register_tool
 from utils.paths import resolve_path
 
 
@@ -15,6 +16,7 @@ class ListDirParams(BaseModel):
     # TODO: could add recurse: bool = False to recursively list the directory
 
 
+@register_tool
 class ListDirTool(Tool):
     name = "list_dir"
     description = "List the content of a directory."

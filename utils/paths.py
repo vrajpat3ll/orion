@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 
 def resolve_path(base: Union[str, Path], path: Union[str, Path]) -> Path:
@@ -9,7 +9,7 @@ def resolve_path(base: Union[str, Path], path: Union[str, Path]) -> Path:
     return Path(base).resolve() / path
 
 
-def display_path_rel_to_cwd(path: str, cwd: Union[Path, None] = None) -> str:
+def display_path_rel_to_cwd(path: str, cwd: Optional[Path] = None) -> str:
     try:
         p = Path(path)
     except Exception:

@@ -1,6 +1,7 @@
 from pathlib import Path
 from pydantic import BaseModel, Field
 from tools.base import FileDiff, Tool, ToolInvocation, ToolKind, ToolResult
+from tools.registry import register_tool
 from utils.paths import ensure_parent_directory, resolve_path
 
 
@@ -23,6 +24,7 @@ class EditFileParams(BaseModel):
     )
 
 
+@register_tool
 class EditFileTool(Tool):
     name = "edit_file"
     description = (

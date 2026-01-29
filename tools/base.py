@@ -2,7 +2,7 @@ from __future__ import annotations
 import abc
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, ValidationError
 from dataclasses import dataclass, field
 from pydantic.json_schema import model_json_schema
@@ -57,12 +57,12 @@ class FileDiff:
 class ToolResult:
     success: bool
     output: str
-    error: Union[str, None] = None
+    error: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     truncated: bool = False
-    diff: Union[FileDiff, None] = None
-    exit_code: Union[int, None] = None
+    diff: Optional[FileDiff] = None
+    exit_code: Optional[int] = None
 
     @classmethod
     def error_result(cls, error: str, output: str = "", **kwargs: Any):
@@ -148,7 +148,7 @@ class Tool(abc.ABC):
 
     async def get_confirmation(
         self, invocation: ToolInvocation
-    ) -> Union[ToolConfirmation, None]:
+    ) -> Optional[ToolConfirmation]:
         if not self.is_mutating(invocation.params):
             return None
 

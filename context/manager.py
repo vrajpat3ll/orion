@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 
 from config.config import Config
@@ -10,10 +10,10 @@ from utils.text import count_tokens
 class LLMMessage:
     role: str
     content: str
-    tool_call_id: Union[str, None] = None
+    tool_call_id: Optional[str] = None
     tool_calls: List[Dict[str, Any]] = field(default_factory=list)
 
-    token_count: Union[int, None] = None
+    token_count: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         result: Dict[str, Any] = {
@@ -47,7 +47,7 @@ class ContextManager:
     def add_assistant_message(
         self,
         message: str,
-        tool_calls: Union[List[Dict[str, Any]], None] = None,
+        tool_calls: Optional[List[Dict[str, Any]]] = None,
     ):
         item = LLMMessage(
             role="assistant",

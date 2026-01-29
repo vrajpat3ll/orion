@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List, Optional
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
@@ -17,7 +17,7 @@ class ModelConfig(BaseModel):
     name: str = "mistralai/devstral-2512:free"  # default model
     # ? use a fairly creative response
     temperature: float = Field(default=1, ge=0.0, le=2.0)
-    context_window: Union[int, None] = 256_000
+    context_window: Optional[int] = 256_000
 
 
 class Config(BaseModel):
@@ -34,17 +34,17 @@ class Config(BaseModel):
     # per agent
     max_turns: int = 100
 
-    developer_instructions: Union[str, None] = None
-    user_instructions: Union[str, None] = None
+    developer_instructions: Optional[str] = None
+    user_instructions: Optional[str] = None
 
     debug: bool = False
 
     @property
-    def api_key(self) -> Union[str, None]:
+    def api_key(self) -> Optional[str]:
         return os.environ.get("API_KEY")
 
     @property
-    def base_url(self) -> Union[str, None]:
+    def base_url(self) -> Optional[str]:
         return os.environ.get("BASE_URL")
 
     @property

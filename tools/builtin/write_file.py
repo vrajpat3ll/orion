@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 
 from tools.base import FileDiff, Tool, ToolInvocation, ToolKind, ToolResult
+from tools.registry import register_tool
 from utils.paths import ensure_parent_directory, resolve_path
 
 
@@ -15,6 +16,7 @@ class WriteFileParams(BaseModel):
     )
 
 
+@register_tool
 class WriteFileTool(Tool):
     name = "write_file"
     description = (

@@ -2,7 +2,7 @@ from agent.agent import Agent
 from agent.events import AgentEventType
 from config.config import Config
 from ui.tui import TUI, get_console
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional
 from utils.logger import get_logger
 
 console = get_console()
@@ -11,7 +11,7 @@ logger = get_logger(__name__)
 
 class CLI:
     def __init__(self, config: Config, **kwargs: Dict[str, Any]) -> None:
-        self.agent: Union[Agent, None] = None
+        self.agent: Optional[Agent] = None
         self.tui = TUI(
             config=config,
             console=console,
@@ -19,7 +19,7 @@ class CLI:
         self.config = config
         self.kwargs = kwargs
 
-    async def run_single(self, message: str) -> Union[str, None]:
+    async def run_single(self, message: str) -> Optional[str]:
         async with Agent(self.config) as agent:
             self.agent = agent
             logger.info("[run_single] Initialized agent")
@@ -61,7 +61,7 @@ class CLI:
         finally:
             console.print("\n[dim]Goodbye![/dim]")
 
-    async def _process_message(self, message: str) -> Union[str, None]:
+    async def _process_message(self, message: str) -> Optional[str]:
         if not self.agent:
             logger.info("[cli] agent is None")
             return None

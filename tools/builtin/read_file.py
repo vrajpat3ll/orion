@@ -1,7 +1,8 @@
-from typing import List, Union
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 from tools.base import Tool, ToolInvocation, ToolKind, ToolResult
+from tools.registry import register_tool
 from utils.paths import is_binary_path, resolve_path
 from utils.text import count_tokens, truncate_text
 
@@ -17,13 +18,14 @@ class ReadFileParams(BaseModel):
         description="Line number to start reading from (1-based). Defaults to 1.",
     )
 
-    limit: Union[int, None] = Field(
+    limit: Optional[int] = Field(
         None,
         ge=1,
         description="Maximum number of lines to read. If not specified, reads entire file.",
     )
 
 
+@register_tool
 class ReadFileTool(Tool):
     name = "read_file"
     description = (

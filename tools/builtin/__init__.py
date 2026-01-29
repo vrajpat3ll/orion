@@ -1,25 +1,5 @@
-from typing import List
-from tools.builtin.edit_file import EditFileTool
-from tools.builtin.list_dir import ListDirTool
-from tools.builtin.read_file import ReadFileTool
-from tools.builtin.shell import ShellTool
-from tools.builtin.write_file import WriteFileTool
-from tools.base import Tool
-
-__all__ = [
-    "ReadFileTool",
-    "WriteFileTool",
-    "EditFileTool",
-    "ShellTool",
-    "ListDirTool",
-]
-
-
-def get_all_builtin_tools() -> List[type[Tool]]:
-    return [
-        ReadFileTool,
-        WriteFileTool,
-        EditFileTool,
-        ShellTool,
-        ListDirTool,
-    ]
+from . import edit_file as edit_file
+from . import list_dir as list_dir
+from . import read_file as read_file
+from . import shell as shell
+from . import write_file as write_file

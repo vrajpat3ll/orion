@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple
 from rich import box
 from rich.align import Align
 from rich.console import Console, Group
@@ -44,7 +44,7 @@ AGENT_THEME = Theme(
     }
 )
 
-_console: Union[Console, None] = None
+_console: Optional[Console] = None
 
 
 def get_console() -> Console:
@@ -59,7 +59,7 @@ class TUI:
     def __init__(
         self,
         config: Config,
-        console: Union[Console, None] = None,
+        console: Optional[Console] = None,
     ) -> None:
         self.console = console or get_console()
         self.config = config
@@ -124,7 +124,7 @@ class TUI:
         self,
         call_id: str,
         name: str,
-        tool_kind: Union[str, None],
+        tool_kind: Optional[str],
         arguments: Dict[str, Any],
     ) -> None:
         self._tool_args_by_call_id[call_id] = arguments
@@ -158,7 +158,7 @@ class TUI:
         self.console.print()
         self.console.print(panel)
 
-    def _extract_read_file_code(self, text: str) -> Union[Tuple[int, str], None]:
+    def _extract_read_file_code(self, text: str) -> Optional[Tuple[int, str]]:
         """Showing lines start-end of total_lines
 
         \\s+\\d+|[content]\\n
@@ -194,11 +194,11 @@ class TUI:
         name: str,
         success: bool,
         output: str,
-        error: Union[str, None],
+        error: Optional[str],
         metadata: Dict[str, Any],
-        diff: Union[str, None],
+        diff: Optional[str],
         truncated: bool,
-        exit_code: Union[int, None],
+        exit_code: Optional[int],
     ) -> None:
         border_style = "success" if success else "error"
         status_icon = "✓" if success else "✗"
@@ -394,7 +394,7 @@ class TUI:
 
         self.console.print(layout)
 
-    def _guess_programming_lang(self, path: Union[str, None]) -> str:
+    def _guess_programming_lang(self, path: Optional[str]) -> str:
         if not path:
             return "text"
         suffix = Path(path).suffix.lower()

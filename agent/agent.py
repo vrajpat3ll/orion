@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import AsyncGenerator, List, Union
+from typing import AsyncGenerator, List, Optional
 from agent.events import AgentEvent, AgentEventType
 from agent.session import Session
 from client.reponse import StreamEventType, ToolCall, ToolCallResult
@@ -21,10 +21,9 @@ class Agent:
         yield AgentEvent.agent_start(message)
         self.session.context_manager.add_user_message(message)
 
-        usage: Union[str, None] = None
-        final_response: Union[str, None] = None
+        usage: Optional[str] = None
+        final_response: Optional[str] = None
         async for event in self._agentic_loop():
-
             yield event
             match event.type:
                 case AgentEventType.TEXT_COMPLETE:

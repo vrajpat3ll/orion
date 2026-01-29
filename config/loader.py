@@ -1,6 +1,6 @@
 from pathlib import Path
 from tomli import TOMLDecodeError
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional
 
 import tomli
 from config.config import Config
@@ -23,7 +23,7 @@ def get_system_config_path() -> Path:
     return get_config_directory() / CONFIG_FILE_NAME
 
 
-def _get_project_config(cwd: Path) -> Union[Path, None]:
+def _get_project_config(cwd: Path) -> Optional[Path]:
     current_dir = cwd.resolve()
     agent_dir = current_dir / ".orion"
 
@@ -34,7 +34,7 @@ def _get_project_config(cwd: Path) -> Union[Path, None]:
     return None
 
 
-def _get_agent_md_files(cwd: Path) -> Union[str, None]:
+def _get_agent_md_files(cwd: Path) -> Optional[str]:
     current_dir = cwd.resolve()
 
     if current_dir.is_dir():
@@ -72,7 +72,7 @@ def _merge_dicts(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, An
     return result
 
 
-def load_config(cwd: Union[Path, None]) -> Config:
+def load_config(cwd: Optional[Path]) -> Config:
     cwd = cwd or Path.cwd()
 
     sys_path = get_system_config_path()

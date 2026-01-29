@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path
 import click
 import sys
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional
 from cmd.cli import CLI
 from config.loader import load_config
 from ui.tui import get_console
@@ -27,8 +27,8 @@ console = get_console()
     required=False,
 )
 def main(
-    prompt: Union[str, None],
-    cwd: Union[Path, None] = None,
+    prompt: Optional[str],
+    cwd: Optional[Path] = None,
     info: bool = False,
 ):
     try:

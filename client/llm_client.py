@@ -2,7 +2,7 @@ import asyncio
 
 # to get asynchronous messages
 from openai import APIConnectionError, APIError, AsyncOpenAI, RateLimitError
-from typing import Any, AsyncGenerator, Dict, List, Union
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from client.reponse import (
     StreamEventType,
@@ -18,7 +18,7 @@ from config.config import Config
 
 class LLMClient:
     def __init__(self, config: Config) -> None:
-        self._client: Union[AsyncOpenAI, None] = None
+        self._client: Optional[AsyncOpenAI] = None
         self._max_retries: int = 3
         self.config = config
 
@@ -58,7 +58,7 @@ class LLMClient:
     async def chat_completion(
         self,
         messages: List[Dict[str, Any]],
-        tools: Union[List[Dict[str, Any]], None] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
         stream: bool = True,
     ) -> AsyncGenerator[StreamEvent, None]:
         """create a completion of the messages given
@@ -116,8 +116,8 @@ class LLMClient:
     ) -> AsyncGenerator[StreamEvent, None]:
         response = await client.chat.completions.create(**kwargs)
 
-        usage: Union[TokenUsage, None] = None
-        finish_reason: Union[str, None] = None
+        usage: Optional[TokenUsage] = None
+        finish_reason: Optional[str] = None
         tool_calls: Dict[int, Dict[str, Any]] = {}
         async for chunk in response:
             if hasattr(chunk, "usage") and chunk.usage:

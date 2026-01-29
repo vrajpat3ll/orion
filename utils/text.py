@@ -1,9 +1,9 @@
-from typing import List, Union
+from typing import List, Optional
 import tiktoken
 
 
 def get_tokenizer(model: str):
-    encoding: Union[tiktoken.Encoding, None] = None
+    encoding: Optional[tiktoken.Encoding] = None
     try:
         encoding = tiktoken.encoding_for_model(model)
     except Exception:

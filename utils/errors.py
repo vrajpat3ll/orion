@@ -1,12 +1,12 @@
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional
 
 
 class AgentError(Exception):
     def __init__(
         self,
         message: str,
-        details: Union[Dict[str, Any], None] = None,
-        cause: Union[Exception, None] = None,
+        details: Optional[Dict[str, Any]] = None,
+        cause: Optional[Exception] = None,
     ) -> None:
         super().__init__(message)
         self.message = message
@@ -36,8 +36,8 @@ class ConfigError(AgentError):
     def __init__(
         self,
         message: str,
-        config_key: Union[str, None] = None,
-        config_file: Union[str, None] = None,
+        config_key: Optional[str] = None,
+        config_file: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
         details = kwargs.pop("details", {}) or {}

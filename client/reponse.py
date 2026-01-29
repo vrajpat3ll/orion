@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 import json
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -42,28 +42,28 @@ class StreamEventType(str, Enum):
 @dataclass
 class ToolCallDelta:
     call_id: str
-    name: Union[str, None] = None
+    name: Optional[str] = None
     arguments_delta: str = ""
 
 
 @dataclass
 class ToolCall:
     call_id: str
-    name: Union[str, None] = None
+    name: Optional[str] = None
     arguments: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class StreamEvent:
     type: StreamEventType
-    text_delta: Union[TextDelta, None] = None
-    error: Union[str, None] = None
+    text_delta: Optional[TextDelta] = None
+    error: Optional[str] = None
 
-    tool_call: Union[ToolCall, None] = None
-    tool_call_delta: Union[ToolCallDelta, None] = None
+    tool_call: Optional[ToolCall] = None
+    tool_call_delta: Optional[ToolCallDelta] = None
 
-    finish_reason: Union[str, None] = None
-    usage: Union[TokenUsage, None] = None
+    finish_reason: Optional[str] = None
+    usage: Optional[TokenUsage] = None
 
 
 @dataclass

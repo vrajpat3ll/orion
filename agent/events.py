@@ -1,7 +1,7 @@
 from __future__ import annotations
 from enum import Enum
 from dataclasses import dataclass, field
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional
 
 from client.reponse import TokenUsage
 from tools.base import ToolResult
@@ -37,8 +37,8 @@ class AgentEvent:
     @classmethod
     def agent_end(
         cls,
-        response: Union[str, None] = None,
-        usage: Union[TokenUsage, None] = None,
+        response: Optional[str] = None,
+        usage: Optional[TokenUsage] = None,
     ):
         return cls(
             type=AgentEventType.AGENT_END,
@@ -52,7 +52,7 @@ class AgentEvent:
     def agent_error(
         cls,
         error: str,
-        details: Union[Dict[str, Any], None] = None,
+        details: Optional[Dict[str, Any]] = None,
     ):
         return cls(
             type=AgentEventType.AGENT_ERROR,

@@ -3,9 +3,10 @@ import fnmatch
 import os
 from pathlib import Path
 import sys
-from typing import Dict, Union
+from typing import Dict, Optional
 from pydantic import BaseModel, Field
 from tools.base import Tool, ToolInvocation, ToolKind, ToolResult
+from tools.registry import register_tool
 import signal
 
 # TODO: create proper harness for commands that can damage the machine without the user's intent
@@ -38,9 +39,10 @@ class ShellParams(BaseModel):
         le=600,
         description="Timeout in seconds (default: 120)",
     )
-    cwd: Union[str, None] = Field(None, description="Working directory for the command")
+    cwd: Optional[str] = Field(None, description="Working directory for the command")
 
 
+@register_tool
 class ShellTool(Tool):
     name = "shell"
     description = "Execute a shell command. Use this for running system commands, scripts and CLI tools."

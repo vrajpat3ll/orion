@@ -36,6 +36,9 @@ AGENT_THEME = Theme(
         "tool.read": "cyan",
         "tool.write": "yellow",
         "tool.shell": "magenta",
+        "tool.network": "bright_blue",
+        "tool.memory": "green",
+        "tool.mcp": "bright_cyan",
         # Code / Blocks
         "code": "white",
     }
@@ -111,7 +114,8 @@ class TUI:
                     line_count = len(v.splitlines()) or 0
                     byte_count = len(v.encode("utf-8", errors="replace"))
                     v = f"<{line_count} lines • {byte_count} bytes>"
-
+            if isinstance(v, bool):
+                v = str(v)
             table.add_row(str(k), str(v))
 
         return table
@@ -137,7 +141,6 @@ class TUI:
         for key in ("path", "cwd"):
             val = display_args.get(key)
             if isinstance(val, str):
-                # display_args[key] = str(resolve_path(base=self._cwd, path=val))
                 display_args[key] = display_path_rel_to_cwd(val, self._cwd)
 
         panel = Panel(
@@ -296,7 +299,50 @@ class TUI:
                     word_wrap=True,
                 )
             )
+        elif name == "list_dir":
+            path = metadata.get("path")
+            entries = metadata.get("entries")
+            summary = []
 
+            if isinstance(path, str):
+                summary.append(path)
+            if isinstance(entries, int):
+                summary.append(f"{entries} entries")
+
+            if summary:
+                blocks.append(Text(" • ".join(summary), style="muted"))
+            output_display = truncate_text(
+                output,
+                self.config.model_name,
+                self._max_block_tokens,
+            )
+            blocks.append(
+                Syntax(
+                    output_display,
+                    "text",
+                    theme="monokai",
+                    word_wrap=True,
+                )
+            )
+
+        if error and not success:
+            blocks.append(Text(error, style="error"))
+            output_display = truncate_text(
+                output,
+                self.config.model_name,
+                self._max_block_tokens,
+            )
+            if output_display.strip():
+                blocks.append(
+                    Syntax(
+                        output_display,
+                        "text",
+                        theme="monokai",
+                        word_wrap=False,
+                    )
+                )
+            else:
+                blocks.append(Text("(no output)", style="muted"))
         if truncated:
             blocks.append(Text("note: tool output was truncated", style="warning"))
 

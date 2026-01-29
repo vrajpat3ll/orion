@@ -163,10 +163,7 @@ class TUI:
         self.console.print(panel)
 
     def _extract_read_file_code(self, text: str) -> Optional[Tuple[int, str]]:
-        """Showing lines start-end of total_lines
-
-        \\s+\\d+|[content]\\n
-        """
+        """Showing lines start-end of total_lines"""
         body = text
         header_match = re.match(r"^Showing lines (\d+)-(\d+) of (\d+)\n\n", text)
         if header_match:

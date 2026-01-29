@@ -42,35 +42,36 @@ class WebSearchTool(Tool):
         if not re.match(url_pat, url):
             return ToolResult.error_result(f"Invalid URL: {url}")
 
+        status_code = None
+        content_length = None
         use_tavily = self.config.web_api_key is not None
         try:
             # ? check with Tavily first, then use httpx as fallback fetch
             if use_tavily:
-                with TavilyClient(
-                    api_key=self.config.web_api_key,
-                ) as client:
-                    response = client.extract(
+                with TavilyClient(api_key=self.config.web_api_key) as client:
+                    tavily_response = client.extract(
                         urls=url,
                         timeout=timeout,
                     )
-                results = response.get("results", [])
+                results = tavily_response.get("results", [])
                 text = ""
                 if results:
                     text = "\n".join(
-                        [
-                            result.get("raw_content")
-                            for result in results
-                            if result.get("error") is None
-                        ]
+                        r.get("raw_content") for r in results if r.get("error") is None
                     )
+                    content_length = len(text)
+
             else:
                 async with httpx.AsyncClient(
                     timeout=timeout,
                     follow_redirects=True,
                 ) as client:
-                    response = await client.get(url=url)
-                    response.raise_for_status()
-                text = response.text
+                    http_response = await client.get(url)
+                    http_response.raise_for_status()
+
+                text = http_response.text
+                status_code = http_response.status_code
+                content_length = len(http_response.content)
         except httpx.HTTPStatusError as e:
             return ToolResult.error_result(
                 f"HTTP {e.response.status_code}: {e.response.reason_phrase}",
@@ -83,9 +84,7 @@ class WebSearchTool(Tool):
         return ToolResult.success_result(
             output=text,
             metadata={
-                "status_code": response.status_code if not use_tavily else None,
-                "content_length": len(response.content)
-                if not use_tavily
-                else len(response.get("results")[0].get("raw_content")),
+                "status_code": status_code,
+                "content_length": content_length,
             },
         )

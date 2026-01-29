@@ -76,7 +76,6 @@ class TUI:
     def end_assistant(self) -> None:
         if self._assistant_stream_open:
             self.console.print()
-            # self.console.print(Rule(Text("Assistant", style="assistant")))
         self._assistant_stream_open = False
 
     def stream_assistant_delta(self, content: str) -> None:
@@ -88,6 +87,9 @@ class TUI:
             "write_file": ["path", "create_directories", "content"],
             "edit_file": ["path", "replace_all", "old_string", "new_string"],
             "shell": ["command", "timeout", "cwd"],
+            "list_dir": ["path", "include_hidden"],
+            "grep": ["path", "case_insenstive", "pattern"],
+            "glob": ["path", "pattern"],
         }
 
         preferred = _PREFERRED_ORDER.get(tool_name, [])
@@ -219,111 +221,160 @@ class TUI:
             primary_path = metadata.get("path")
 
         # TODO: carefully remove the errors
-        if name == "read_file" and success:
-            if primary_path:
-                op = self._extract_read_file_code(output)
-                start_line = op[0] if op else 1
-                code = op[1] if op else ""
-                shown_start = metadata.get("shown_start")
-                shown_end = metadata.get("shown_end")
-                total_lines = metadata.get("total_lines")
-                pl = self._guess_programming_lang(primary_path)
-                header_parts = [display_path_rel_to_cwd(primary_path, self._cwd)]
-                header_parts.append(" • ")
-                if shown_start and shown_end and total_lines:
-                    header_parts.append(
-                        f"Showing lines {shown_start}-{shown_end} of {total_lines}"
-                    )
+        if success:
+            match name:
+                case "read_file":
+                    if primary_path:
+                        op = self._extract_read_file_code(output)
+                        start_line = op[0] if op else 1
+                        code = op[1] if op else ""
+                        shown_start = metadata.get("shown_start")
+                        shown_end = metadata.get("shown_end")
+                        total_lines = metadata.get("total_lines")
+                        pl = self._guess_programming_lang(primary_path)
+                        header_parts = [
+                            display_path_rel_to_cwd(primary_path, self._cwd)
+                        ]
+                        header_parts.append(" • ")
+                        if shown_start and shown_end and total_lines:
+                            header_parts.append(
+                                f"Showing lines {shown_start}-{shown_end} of {total_lines}"
+                            )
 
-                header = "".join(header_parts)
-                blocks.append(Text(header, style="muted"))
-                blocks.append(
-                    Syntax(
-                        code or "",
-                        pl,
-                        start_line=start_line or 1,
-                        theme="monokai",
-                        line_numbers=True,
-                        word_wrap=False,
+                        header = "".join(header_parts)
+                        blocks.append(Text(header, style="muted"))
+                        blocks.append(
+                            Syntax(
+                                code or "",
+                                pl,
+                                start_line=start_line or 1,
+                                theme="monokai",
+                                line_numbers=True,
+                                word_wrap=False,
+                            )
+                        )
+                    else:
+                        output_display = truncate_text(
+                            output,
+                            self.config.model_name,
+                            self._max_block_tokens,
+                        )
+                        blocks.append(
+                            Syntax(
+                                output_display,
+                                "text",
+                                theme="monokai",
+                                word_wrap=False,
+                            )
+                        )
+                case "write_file" | "edit_file":
+                    if diff:
+                        output_line = output.strip() or "Completed"
+                        blocks.append(Text(output_line, style="muted"))
+                        diff_text = diff
+                        diff_display = truncate_text(
+                            diff_text,
+                            self.config.model_name,
+                            self._max_block_tokens,
+                        )
+                        blocks.append(
+                            Syntax(
+                                diff_display,
+                                lexer="diff",
+                                theme="monokai",
+                                word_wrap=True,
+                            )
+                        )
+                case "shell":
+                    command = args.get("command")
+                    if isinstance(command, str) and command.strip():
+                        blocks.append(
+                            Text(
+                                f"\033[2;2;33m$\033[0m {command.strip()}", style="muted"
+                            )
+                        )
+                    if exit_code is not None:
+                        blocks.append(Text(f"{exit_code = }", style="muted"))
+                    output_display = truncate_text(
+                        output,
+                        self.config.model_name,
+                        self._max_block_tokens,
                     )
-                )
-            else:
-                output_display = truncate_text(
-                    output,
-                    self.config.model_name,
-                    self._max_block_tokens,
-                )
-                blocks.append(
-                    Syntax(
-                        output_display,
-                        "text",
-                        theme="monokai",
-                        word_wrap=False,
+                    blocks.append(
+                        Syntax(
+                            output_display,
+                            "text",
+                            theme="monokai",
+                            word_wrap=True,
+                        )
                     )
-                )
-        elif name in {"write_file", "edit_file"} and success and diff:
-            output_line = output.strip() or "Completed"
-            blocks.append(Text(output_line, style="muted"))
-            diff_text = diff
-            diff_display = truncate_text(
-                diff_text,
-                self.config.model_name,
-                self._max_block_tokens,
-            )
-            blocks.append(
-                Syntax(
-                    diff_display,
-                    lexer="diff",
-                    theme="monokai",
-                    word_wrap=True,
-                )
-            )
-        elif name == "shell":
-            command = args.get("command")
-            if isinstance(command, str) and command.strip():
-                blocks.append(
-                    Text(f"\033[2;2;33m$\033[0m {command.strip()}", style="muted")
-                )
-            if exit_code is not None:
-                blocks.append(Text(f"{exit_code = }", style="muted"))
-            output_display = truncate_text(
-                output,
-                self.config.model_name,
-                self._max_block_tokens,
-            )
-            blocks.append(
-                Syntax(
-                    output_display,
-                    "text",
-                    theme="monokai",
-                    word_wrap=True,
-                )
-            )
-        elif name == "list_dir":
-            path = metadata.get("path")
-            entries = metadata.get("entries")
-            summary = []
+                case "list_dir":
+                    path = metadata.get("path")
+                    entries = metadata.get("entries")
+                    summary = []
 
-            if isinstance(path, str):
-                summary.append(path)
-            if isinstance(entries, int):
-                summary.append(f"{entries} entries")
+                    if isinstance(path, str):
+                        summary.append(path)
+                    if isinstance(entries, int):
+                        summary.append(f"{entries} entries")
 
-            if summary:
-                blocks.append(Text(" • ".join(summary), style="muted"))
-            output_display = truncate_text(
-                output,
-                self.config.model_name,
-                self._max_block_tokens,
-            )
-            blocks.append(
-                Syntax(
-                    output_display,
-                    "text",
-                    theme="monokai",
-                    word_wrap=True,
-                )
-            )
+                    if summary:
+                        blocks.append(Text(" • ".join(summary), style="muted"))
+                    output_display = truncate_text(
+                        output,
+                        self.config.model_name,
+                        self._max_block_tokens,
+                    )
+                    blocks.append(
+                        Syntax(
+                            output_display,
+                            "text",
+                            theme="monokai",
+                            word_wrap=True,
+                        )
+                    )
+                case "grep":
+                    matches = metadata.get("matches")
+                    files_searched = metadata.get("files_searched")
+                    summary = []
+
+                    if isinstance(matches, int):
+                        summary.append(f"{matches} matches")
+                    if isinstance(files_searched, int):
+                        summary.append(f"searched {files_searched} files")
+                    if summary:
+                        blocks.append(Text(" • ".join(summary), style="muted"))
+                    output_display = truncate_text(
+                        output,
+                        self.config.model_name,
+                        self._max_block_tokens,
+                    )
+                    blocks.append(
+                        Syntax(
+                            output_display,
+                            "text",
+                            theme="monokai",
+                            word_wrap=True,
+                        )
+                    )
+                case "glob":
+                    matches = metadata.get("matches")
+
+                    if isinstance(matches, int):
+                        blocks.append(Text(f"{matches} matches", style="muted"))
+                    output_display = truncate_text(
+                        output,
+                        self.config.model_name,
+                        self._max_block_tokens,
+                    )
+                    blocks.append(
+                        Syntax(
+                            output_display,
+                            "text",
+                            theme="monokai",
+                            word_wrap=True,
+                        )
+                    )
 
         if error and not success:
             blocks.append(Text(error, style="error"))

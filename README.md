@@ -49,8 +49,12 @@ Create a `.env` file in the project root with your OpenRouter API key:
 
 ```env
 # get an openrouter API key from https://openrouter.ai/settings/keys after logging in
-API_KEY='your-api-key-here'
-BASE_URL='https://openrouter.ai/api/v1/'
+OPENROUTER_API_KEY='your-api-key-here'
+
+LLM_BASE_URL='https://openrouter.ai/api/v1/'
+
+# https://docs.tavily.com/documentation/api-reference/introduction
+TAVILY_API_KEY='tvly-YOUR_API_KEY'
 ```
 
 ## Usage
@@ -59,16 +63,16 @@ BASE_URL='https://openrouter.ai/api/v1/'
 
 ```bash
 # Run Orion in interactive mode
-python main.py
+uv run main.py
 
 # Run a single prompt
-python main.py "Your prompt here"
+uv run main.py "Your prompt here"
 
 # Run with custom working directory
-python main.py --cwd /path/to/your/project "Your prompt"
+uv run main.py --cwd /path/to/your/project "Your prompt"
 
 # Show config info card
-python main.py --info
+uv run main.py --info
 ```
 
 ### TODO: Interactive Commands
@@ -112,9 +116,33 @@ uv run task lint
 
 To add new tools to Orion:
 
-1. Create a new tool class in the `tools/` directory
-2. Implement the required interface (name, description, execute method)
+1. Create a new tool class in the `tools/builtin` directory
+2. Implement the required interface (name, description, params, execute method)
 3. Register the tool in the tool registry
+
+```python
+from tools.base import Tool, ToolInvocation, ToolKind, ToolResult
+from tools.registry import register_tool
+from pydantic import BaseModel, Field
+
+class VeryUniqueParams(BaseModel):
+  param1 = Field(..., description="...")
+  param2 = Field(..., description="...")
+  # Rest of the implementation
+  ...
+
+
+@register_tool
+class VeryUniqueTool(Tool):
+  name = "..."
+  description = "..."
+  schema = VeryUniqueParams
+
+  async def execute(self, invocation: ToolInvocation) -> ToolResult:
+    params = VeryUniqueParams(**invocation.params)
+    # Rest of the implementation
+    ...
+```
 
 ### Customizing Prompts
 
@@ -130,10 +158,9 @@ Orion can be configured through:
 
 ### Environment Variables
 
-- `API_KEY`: Your OpenRouter API key
-- `BASE_URL`: Base URL for the OpenRouter API (could be any endpoint compatible with OpenAI's Python SDK)
-  <!-- - `MAX_TURNS`: Maximum number of agent turns (default: 5) -->
-  <!-- - `MODEL`: LLM model to use -->
+- `OPENROUTER_API_KEY`: Your OpenRouter API key
+- `LLM_BASE_URL`: Base URL for the OpenRouter API (could be any endpoint compatible with OpenAI's Python SDK)
+- `TAVILY_API_KEY`: [Optional] API key for using Tavily for web search and fetching of results
 
 ## Contributing
 

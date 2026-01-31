@@ -87,3 +87,5 @@ class ToDoTool(Tool):
                 self._todos.clear()
 
                 return ToolResult.success_result(output=f"Cleared {count_todos} ToDos.")
+
+        return ToolResult.error_result("[ToDoTool] UNREACHABLE")

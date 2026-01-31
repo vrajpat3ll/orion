@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 
 import tomli
 from config.config import Config
-from platformdirs import user_config_dir
+from platformdirs import user_config_dir, user_data_dir
 
 from utils.errors import ConfigError
 from utils.logger import get_logger
@@ -16,6 +16,10 @@ logger = get_logger(__name__)
 
 def get_config_directory() -> Path:
     return Path(user_config_dir("orion"))
+
+
+def get_data_directory() -> Path:
+    return Path(user_data_dir("orion"))
 
 
 def get_system_config_path() -> Path:

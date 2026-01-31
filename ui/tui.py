@@ -92,6 +92,8 @@ class TUI:
             "glob": ["path", "pattern"],
             "web_search": ["query", "pattern"],
             "web_fetch": ["url", "timeout"],
+            "todo": ["action", "ids", "contents"],
+            "memory": ["action", "keys", "values"],
         }
 
         preferred = _PREFERRED_ORDER.get(tool_name, [])
@@ -427,6 +429,33 @@ class TUI:
                         )
                     )
                 case "todos":
+                    output_display = truncate_text(
+                        output,
+                        self.config.model_name,
+                        self._max_block_tokens,
+                    )
+                    blocks.append(
+                        Syntax(
+                            output_display,
+                            "text",
+                            theme="monokai",
+                            word_wrap=True,
+                        )
+                    )
+                case "memory":
+                    action = args.get("action")
+                    keys = args.get("keys")
+                    found = metadata.get("found", False)
+                    summary = []
+                    if isinstance(action, str) and action:
+                        summary.append(action)
+                    if isinstance(keys, list) and keys:
+                        summary.append(keys)
+                    if isinstance(found, bool):
+                        summary.append("found" if found else "missing")
+                    if summary:
+                        blocks.append(Text(" • ".join(summary), style="muted"))
+
                     output_display = truncate_text(
                         output,
                         self.config.model_name,

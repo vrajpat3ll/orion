@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 
 from config.config import Config
 from prompts import get_system_prompt
+from tools.base import Tool
 from utils.text import count_tokens
 
 
@@ -31,9 +32,18 @@ class LLMMessage:
 
 
 class ContextManager:
-    def __init__(self, config: Config) -> None:
+    def __init__(
+        self,
+        config: Config,
+        tools: Optional[List[Tool]] = None,
+        user_memory: Optional[str] = None,
+    ) -> None:
         self.config = config
-        self._system_prompt = get_system_prompt(config)
+        self._system_prompt = get_system_prompt(
+            config=config,
+            tools=tools,
+            user_memory=user_memory,
+        )
         self._messages: List[LLMMessage] = []
 
     def add_user_message(self, message: str):

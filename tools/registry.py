@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Type, Optional
 
 from config.config import Config
 from tools.base import Tool, ToolInvocation, ToolResult
+from tools.subagents import SubAgentTool, get_default_subagent_definitions
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -23,8 +24,9 @@ def register_tool(cls: Type[Tool]):
 
 
 class ToolRegistry:
-    def __init__(self) -> None:
+    def __init__(self, config: Config) -> None:
         self._tools: Dict[str, Tool] = {}
+        self.config = config
 
     def register(self, tool: Tool) -> None:
         if tool.name in self._tools:
@@ -46,7 +48,12 @@ class ToolRegistry:
         return self._tools.get(name)
 
     def get_tools(self) -> List[Tool]:
-        return list(self._tools.values())
+        tools: List[Tool] = list(self._tools.values())
+        if self.config.allowed_tools:
+            allowed_set = set(self.config.allowed_tools)
+            tools = [t for t in tools if t.name in allowed_set]
+
+        return tools
 
     def get_schemas(self) -> List[Dict[str, Any]]:
         return [tool.to_openai_schema() for tool in self.get_tools()]
@@ -90,7 +97,13 @@ class ToolRegistry:
 
 
 def create_default_registry(config: Config) -> ToolRegistry:
-    registry = ToolRegistry()
+    #  to ensure all tools are registered
+    import tools.builtin  # noqa: F401
+
+    registry = ToolRegistry(config=config)
     for name, tool_cls in _TOOL_CLASSES.items():
         registry.register(tool_cls(config=config))
+
+    for subagent_def in get_default_subagent_definitions():
+        registry.register(SubAgentTool(config, subagent_def))
     return registry

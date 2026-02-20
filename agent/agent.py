@@ -99,7 +99,7 @@ class Agent:
                 yield AgentEvent.text_complete(content=response_text)
 
             if not tool_calls:
-                break
+                return
 
             logger.info(f"[agent._agentic_loop] Running {len(tool_calls)} tool_calls")
             tool_call_results: List[ToolCallResult] = []
@@ -134,6 +134,8 @@ class Agent:
                     tool_result.tool_call_id,
                     tool_result.content,
                 )
+
+        yield AgentEvent.agent_error(f"Maximum turns ({max_turns}) reached!")
 
     async def __aenter__(self) -> Agent:
         return self

@@ -1,12 +1,25 @@
-import sys
+from datetime import datetime
+import platform
+from typing import List, Optional
 from config.config import Config
+from tools.base import Tool
 
 
-def get_system_prompt(config: Config) -> str:
+def get_system_prompt(
+    config: Config,
+    tools: Optional[List[Tool]] = None,
+    user_memory: Optional[str] = None,
+) -> str:
     parts = []
 
     # Identity and Role
     parts.append(_get_identity_section())
+
+    # Environment
+    parts.append(_get_environment_section(config))
+
+    if tools:
+        parts.append(_get_tool_guidelines_section(tools))
 
     # AGENTS.md spec
     parts.append(_get_agents_md_section())
@@ -23,14 +36,17 @@ def get_system_prompt(config: Config) -> str:
     # Operational guidelines
     parts.append(_get_operational_section())
 
+    if user_memory:
+        parts.append(_get_memory_section(user_memory))
+
     return "\n\n".join(parts)
 
 
 def _get_identity_section() -> str:
     """Generate the identity section"""
-    return f"""# Identity
+    return """# Identity
 
-You are Orion, an autonomous AI coding agent, that works solely through the terminal. You are expected to be precise, safe and helpful. You are on the {sys.platform} platform.
+You are Orion, an autonomous AI coding agent, that works solely through the terminal. You are expected to be precise, safe and helpful.
 
 ## Your capabilities:
 - Receive user prompts and other context provided by the harness, such as files in the workspace
@@ -39,6 +55,34 @@ You are Orion, an autonomous AI coding agent, that works solely through the term
 - Depending on configuration, you can request that function calls be escalated to the user for approval before running
 
 You are pair programming with the user to help them accomplish their goals. You should be proactive, thorough and focused on delivering high-qauality results."""
+
+
+def _get_environment_section(config: Config):
+    """Generate environment section"""
+    os_info = f"{platform.system()} {platform.release()}"
+    now = datetime.now()
+    return f"""# Environment
+
+- **Current date**: {now.strftime("%A, %B %d, %Y")}
+- **Operating System**: {os_info}
+- **Working Directory**: {config.cwd}
+- **Shell**: {_get_shell_info()}
+
+The user has granted you access to run tools in service of their request. Use them when needed."""
+
+
+def _get_shell_info():
+    """"""
+    import os
+    import sys
+
+    match sys.platform:
+        case "darwin":
+            return os.environ.get("SHELL", "/bin/zsh")
+        case "win32":
+            return "Powershell/cmd.exe"
+        case _:
+            return os.environ.get("SHELL", "/bin/bash")
 
 
 def _get_agents_md_section() -> str:
@@ -165,3 +209,77 @@ def _get_user_instructions_section(instructions: str) -> str:
 The user has provided the follwing instructions:
 
 {instructions}"""
+
+
+def _get_memory_section(memory: str) -> str:
+    """Generate user memory section."""
+    return f"""# Remembered Context
+
+The following information has been stored from previous interactions:
+
+{memory}
+
+Use this information to personalize your responses and maintain consistency."""
+
+
+def _get_tool_guidelines_section(tools: List[Tool]) -> str:
+    """Generate tool usage guidelines"""
+
+    guidelines = """# Tool Usage Guidelines
+
+You have access to the following tools to accomplish your tasks:
+"""
+    regular_tools = [tool for tool in tools if not tool.name.startswith("subagent_")]
+    subagent_tools = [tool for tool in tools if tool.name.startswith("subagent_")]
+
+    for tool in regular_tools:
+        description = tool.description
+        if len(description) > 100:
+            description = description[:100] + "..."
+        guidelines += f"\n- **{tool.name}**: {description}"
+
+    if subagent_tools:
+        guidelines += "\n\n## Sub-Agents\n\n"
+        for tool in subagent_tools:
+            description = tool.description
+            if len(description) > 100:
+                description = description[:100] + "..."
+            guidelines += f"\n- **{tool.name}**: {description}"
+
+    guidelines += """
+## Best Practices
+
+1. **File Operations**:
+    - Use `read_file` before editing to understand current context
+    - Use `edit_file` for surgical changes (search/replace)
+    - Use `write_file` for creating new files or complete rewrites
+
+2. **Search and Discovery**:
+    - Use `grep` to find code by content
+    - Use `glob` to find files by pattern
+    - Use `list_dir` to explore the directory structure
+
+3. **Shell Commands**:
+    - Use `shell` for running commands, tests, builds, etc.
+    - Prefer read-only commands when just gathering information
+    - Be cautious with commands that modify state
+
+4. **Task Management**:
+    - Use `todos` to track multi-step tasks
+    - Mark tasks as completed as you finish them
+
+5. **Memory**:
+    - Use `memory` to store important user preferences
+    - Retrieve stored preferences when relevant"""
+
+    if subagent_tools:
+        guidelines += """
+
+6. **Sub-Agents**:
+    - Use sub-agents for complex codebase exploration, code review, or specialized multi-step tasks
+    - Sub-Agents run with isolated context and have limited tool access
+    - Provide clear, specific goals when invoking sub-agents
+    - For simple queries (like finding a specific function), use direct tools (`grep`, `read_file`) instead
+    - Use sub-agents when the task involves complex refactoring, codebase exploration, or system-wide analysis"""
+
+    return guidelines

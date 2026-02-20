@@ -31,6 +31,8 @@ def main(
     cwd: Optional[Path] = None,
     info: bool = False,
 ):
+    if cwd:
+        cwd = cwd.resolve()
     try:
         config = load_config(cwd=cwd)
         errors = config.validate()

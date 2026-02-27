@@ -1,93 +1,147 @@
-# Orion - A Personal Coding Agent
+# Orion — Personal AI Coding Agent
 
 ![CI](https://github.com/vrajpat3ll/orion/actions/workflows/ci.yml/badge.svg)
 
-Orion is a powerful, autonomous AI coding agent designed to assist with software development tasks. It provides an interactive command-line interface for executing prompts, managing tools, and automating workflows.
+Orion is an autonomous AI coding agent designed to assist with software development workflows. It provides an interactive command-line interface for executing prompts, managing tools, and automating development tasks.
 
 ## Features
 
-- **Interactive CLI**: Engage with Orion through a user-friendly command-line interface
-- **Tool Integration**: Execute shell commands, read/write files, and perform various operations
-- **Context Management**: Maintain conversation history and context across multiple turns
-- **Streaming Responses**: Real-time streaming of AI responses for better user experience
-- **Configurable**: Customize behavior through configuration files
+- **Interactive CLI** — run prompts and workflows directly from your terminal
+- **Tool Integration** — execute shell commands, read/write files, and automate tasks
+- **Context Management** — maintains conversation state across multiple turns
+- **Streaming Responses** — real-time output for improved responsiveness
+- **Configurable** — environment variables and config-based customization
+- **Docker Support** — reproducible and dependency-free deployment
 
 ## Installation
 
 ### Prerequisites
 
-- Python 3.13+
-- OpenRouter API key (for LLM access)
+- Python **3.12+**
+- OpenRouter API key
 
-We use `uv` for package management.
+We use **uv** for dependency management.
 
-> Install `uv` [here](https://docs.astral.sh/uv/getting-started/installation/)!
->
-> OR just install using pip, `pip install uv`
+Install uv:
+
+```bash
+pip install uv
+```
+
+or follow official instructions:
+[https://docs.astral.sh/uv/getting-started/installation/](https://docs.astral.sh/uv/getting-started/installation/)
 
 ### Setup
 
 ```bash
-# Clone the repository
 git clone https://github.com/vrajpat3ll/orion.git
 cd orion
 
-# Install dependencies
 uv sync
 
-# Activate virtual environment
-./.venv/Scripts/activate # Windows
-source .venv/bin/activate # Linux
+# activate virtual environment
+./.venv/Scripts/activate   # Windows
+source .venv/bin/activate  # macOS/Linux
 
-# Create a .env file from the example
 cp .env.example .env
-
-# Add your OpenRouter API key to .env
 ```
+
+Add your API key to `.env`.
 
 ## Configuration
 
-Create a `.env` file in the project root with your OpenRouter API key:
+Create a `.env` file:
 
 ```env
-# get an openrouter API key from https://openrouter.ai/settings/keys after logging in
-OPENROUTER_API_KEY='your-api-key-here'
+OPENROUTER_API_KEY=your_api_key_here
+LLM_BASE_URL=https://openrouter.ai/api/v1/
+TAVILY_API_KEY=optional_key
+```
 
-LLM_BASE_URL='https://openrouter.ai/api/v1/'
+## Quickstart (Docker — Recommended)
 
-# https://docs.tavily.com/documentation/api-reference/introduction
-TAVILY_API_KEY='tvly-YOUR_API_KEY'
+Run Orion without installing dependencies:
+
+```bash
+docker build -t orion .
+docker run -it --env-file .env orion
 ```
 
 ## Usage
 
-### Basic Usage
+### Interactive Mode
 
 ```bash
-# Run Orion in interactive mode
 uv run main.py
+```
 
-# Run a single prompt
-uv run main.py "Your prompt here"
+### Run a Single Prompt
 
-# Run with custom working directory
-uv run main.py --cwd /path/to/your/project "Your prompt"
+```bash
+uv run main.py "Explain this repository"
+```
 
-# Show config info card
+### Use a Custom Working Directory
+
+```bash
+uv run main.py --cwd /path/to/project "Fix imports"
+```
+
+### Show Configuration Info
+
+```bash
 uv run main.py --info
 ```
 
-### TODO: Interactive Commands
+## Docker Usage
 
-Once in interactive mode, you can use these special commands:
+### Run a single prompt
 
-- `/exit` or `/bye`: Exit the interactive session (only this works for now)
-- `/help`: Show available commands
-- `/config`: Display current configuration
-- `/approval`: Manage approval settings
-- `/model`: Show current model information
+```bash
+docker run -it --env-file .env orion run "Explain this repo"
+```
 
-### Example Session
+### Work on a local project
+
+#### macOS / Linux
+
+```bash
+docker run -it \
+  --env-file .env \
+  -v $(pwd):/workspace \
+  -w /workspace \
+  orion
+```
+
+#### Windows PowerShell
+
+```powershell
+docker run -it `
+  --env-file .env `
+  -v ${PWD}:/workspace `
+  -w /workspace `
+  orion
+```
+
+### Pass CLI flags
+
+```bash
+docker run -it orion run "fix imports"
+docker run -it orion --help
+```
+
+## Interactive Commands
+
+These are **yet to be implemented**.
+Once in interactive mode:
+
+- `/exit` or `/bye` — exit session
+- `/help` — show commands
+- `/config` — display configuration
+- `/approval` — manage approval settings
+- `/model` — show model information
+
+## Example Session
 
 ```bash
 $ python main.py --info
@@ -107,85 +161,83 @@ Hello from orion!
 
 ## Development
 
-### Running Tests
+### Run lint checks
 
 ```bash
-# Run linting
 uv run task lint
 ```
 
 ### Adding New Tools
 
-To add new tools to Orion:
-
-1. Create a new tool class in the `tools/builtin` directory
-2. Implement the required interface (name, description, params, execute method)
-3. Register the tool in the tool registry
+1. Create a tool in `tools/builtin/`
+2. Implement required interface
+3. Register using `@register_tool`
 
 ```python
-from orion.tools.base import Tool, ToolInvocation, ToolKind, ToolResult
+from orion.tools.base import Tool, ToolInvocation, ToolResult
 from orion.tools.registry import register_tool
 from pydantic import BaseModel, Field
 
-class VeryUniqueParams(BaseModel):
-  param1 = Field(..., description="...")
-  param2 = Field(..., description="...")
-  # Rest of the implementation
-  ...
-
+class Params(BaseModel):
+    example: str = Field(...)
 
 @register_tool
-class VeryUniqueTool(Tool):
-  name = "..."
-  description = "..."
-  schema = VeryUniqueParams
+class ExampleTool(Tool):
+    name = "example"
+    description = "Example tool"
+    schema = Params
 
-  async def execute(self, invocation: ToolInvocation) -> ToolResult:
-    params = VeryUniqueParams(**invocation.params)
-    # Rest of the implementation
-    ...
+    async def execute(self, invocation: ToolInvocation) -> ToolResult:
+        params = Params(**invocation.params)
+        ...
 ```
 
-### Customizing Prompts
+## Customizing Prompts
 
-Prompt templates are located in the `prompts/` directory. You can modify these to change Orion's behavior and personality.
+Prompt templates are located in:
 
-## Configuration Options
+```
+prompts/
+```
+
+Modify them to change Orion’s behavior.
+
+## Configuration Sources
 
 Orion can be configured through:
 
-- Environment variables (`.env` file)
-- Command-line arguments
-- Configuration files
+- `.env` environment variables
+- CLI arguments
+- configuration files
 
 ### Environment Variables
 
-- `OPENROUTER_API_KEY`: Your OpenRouter API key
-- `LLM_BASE_URL`: Base URL for the OpenRouter API (could be any endpoint compatible with OpenAI's Python SDK)
-- `TAVILY_API_KEY`: [Optional] API key for using Tavily for web search and fetching of results
+| Variable             | Description               |
+| -------------------- | ------------------------- |
+| `OPENROUTER_API_KEY` | **Required** API key      |
+| `LLM_BASE_URL`       | **Required** API endpoint |
+| `TAVILY_API_KEY`     | **Optional** web search   |
+
+---
 
 ## Contributing
 
-Contributions are welcome! Please follow these guidelines:
-
-1. Fork the repository
+1. Fork the repo
 2. Create a feature branch
-3. Make your changes
-4. Run tests and linting
+3. Make changes
+4. Run lint/tests
 5. Submit a pull request
 
 ## License
 
-This project is licensed under the MIT License.
+MIT License
 
 ## Support
 
-For issues, questions, or feature requests, please open an issue on GitHub.
-
----
+Open an issue for bugs, questions, or feature requests.
 
 Built with ❤️ by Vraj Patel
 
----
+## ⚠️ Disclaimer
 
-Disclaimer: This README was generated using Orion using the prompt mentioned above in the example.
+This README was generated using Orion itself.

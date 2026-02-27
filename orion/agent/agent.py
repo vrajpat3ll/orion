@@ -1,0 +1,154 @@
+from __future__ import annotations
+from typing import AsyncGenerator, List, Optional
+from orion.agent.events import AgentEvent, AgentEventType
+from orion.agent.session import Session
+from orion.client.reponse import StreamEventType, ToolCall, ToolCallResult
+from orion.config.config import Config
+from orion.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+
+class Agent:
+    def __init__(
+        self,
+        config: Config,
+    ) -> None:
+        self.config = config
+        self.session = Session(config)
+
+    async def run(self, message: str) -> AsyncGenerator[AgentEvent]:
+        yield AgentEvent.agent_start(message)
+        self.session.context_manager.add_user_message(message)
+
+        usage: Optional[str] = None
+        final_response: Optional[str] = None
+        async for event in self._agentic_loop():
+            yield event
+            match event.type:
+                case AgentEventType.TEXT_COMPLETE:
+                    event.data
+                    final_response = event.data.get("content", "")
+
+                    if final_response:
+                        AgentEvent.text_complete(final_response)
+                        logger.info("[agent.run] got response from LLM")
+                    # TODO: usage to be added
+
+        yield AgentEvent.agent_end(
+            response=final_response,
+            usage=usage,
+        )
+
+    async def _agentic_loop(self) -> AsyncGenerator[AgentEvent]:
+        max_turns = self.config.max_turns
+
+        for turn in range(max_turns):
+            # print(f"{turn = }")
+            self.session.increment_turn()
+            response_text = ""
+
+            tool_schemas = self.session.tool_registry.get_schemas()
+
+            tool_calls: List[ToolCall] = []
+
+            async for event in self.session.client.chat_completion(
+                self.session.context_manager.get_messages(),
+                tools=tool_schemas if tool_schemas else None,
+                stream=True,
+            ):
+                match event.type:
+                    case StreamEventType.TEXT_DELTA:
+                        if event.text_delta:
+                            content = event.text_delta.content
+                            response_text += content
+                            yield AgentEvent.text_delta(content)
+
+                    case StreamEventType.ERROR:
+                        logger.info(
+                            f"[agent._agentic_loop] got an error from LLM: {event = }"
+                        )
+                        yield AgentEvent.agent_error(
+                            event.error or "Unknown error occured."
+                        )
+
+                    case StreamEventType.TOOL_CALL_COMPLETE:
+                        if event.tool_call:
+                            logger.info(
+                                f"[agent._agentic_loop] got a tool_call from LLM: {event.tool_call = }"
+                            )
+                            tool_calls.append(event.tool_call)
+
+            self.session.context_manager.add_assistant_message(
+                response_text,
+                tool_calls=[
+                    {
+                        "id": tc.call_id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.name,
+                            "arguments": str(tc.arguments),
+                        },
+                    }
+                    for tc in tool_calls
+                ]
+                if tool_calls
+                else None,
+            )
+            if response_text:
+                yield AgentEvent.text_complete(content=response_text)
+
+            if not tool_calls:
+                return
+
+            logger.info(f"[agent._agentic_loop] Running {len(tool_calls)} tool_calls")
+            tool_call_results: List[ToolCallResult] = []
+            for tool_call in tool_calls:
+                yield AgentEvent.tool_call_start(
+                    call_id=tool_call.call_id,
+                    name=tool_call.name or "",
+                    arguments=tool_call.arguments,
+                )
+
+                result = await self.session.tool_registry.invoke(
+                    tool_call.name or "",
+                    tool_call.arguments,
+                    self.config.cwd,
+                )
+
+                yield AgentEvent.tool_call_complete(
+                    tool_call.call_id,
+                    tool_call.name or "",
+                    result,
+                )
+
+                tool_call_results.append(
+                    ToolCallResult(
+                        tool_call_id=tool_call.call_id,
+                        content=result.to_model_output(),
+                        is_error=not result.success,
+                    )
+                )
+            for tool_result in tool_call_results:
+                self.session.context_manager.add_tool_result(
+                    tool_result.tool_call_id,
+                    tool_result.content,
+                )
+
+        yield AgentEvent.agent_error(f"Maximum turns ({max_turns}) reached!")
+
+    async def __aenter__(self) -> Agent:
+        return self
+
+    # > Methods for context management (_a_sync)
+    # ? with Agent() as agent:
+    # ?   ...
+
+    async def __aexit__(
+        self,
+        exc_type,
+        exc_val,
+        exc_tb,
+    ) -> None:
+        if self.session.client._client:
+            await self.session.client.close()

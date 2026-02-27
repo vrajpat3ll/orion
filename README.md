@@ -1,4 +1,6 @@
-# Orion - Personal Coding Agent
+# Orion - A Personal Coding Agent
+
+![CI](https://github.com/vrajpat3ll/orion/actions/workflows/ci.yml/badge.svg)
 
 Orion is a powerful, autonomous AI coding agent designed to assist with software development tasks. It provides an interactive command-line interface for executing prompts, managing tools, and automating workflows.
 
@@ -121,8 +123,8 @@ To add new tools to Orion:
 3. Register the tool in the tool registry
 
 ```python
-from tools.base import Tool, ToolInvocation, ToolKind, ToolResult
-from tools.registry import register_tool
+from orion.tools.base import Tool, ToolInvocation, ToolKind, ToolResult
+from orion.tools.registry import register_tool
 from pydantic import BaseModel, Field
 
 class VeryUniqueParams(BaseModel):

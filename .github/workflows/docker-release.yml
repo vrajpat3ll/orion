@@ -1,0 +1,25 @@
+name: Publish Docker Image
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        run: echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build image
+        run: docker build -t vrajpat3ll/orion:${{ github.ref_name }} .
+
+      - name: Push image
+        run: docker push vrajpat3ll/orion:${{ github.ref_name }}

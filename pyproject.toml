@@ -1,6 +1,6 @@
 [project]
 name = "orion"
-version = "0.3.0"
+version = "0.3.1"
 description = "My very own coding agent"
 authors = [{ name = "Vraj Patel", email = "vrajpat3ll@gmail.com" }]
 readme = "README.md"

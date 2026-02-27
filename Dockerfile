@@ -7,12 +7,6 @@ ENV PYTHONUNBUFFERED=1
 # Create working directory
 WORKDIR /app
 
-# Install system dependencies (optional but useful)
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
 # Copy dependency files first (better layer caching)
 COPY pyproject.toml uv.lock* ./
 
